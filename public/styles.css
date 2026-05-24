@@ -1104,6 +1104,18 @@ label {
 
   .panel-tools {
     justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .panel-tools::-webkit-scrollbar {
+    display: none;
+  }
+
+  .panel-tools button,
+  .panel-tools .badge {
+    flex: 0 0 auto;
   }
 
   .nav {
