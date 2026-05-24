@@ -13,7 +13,10 @@ ENV REALM_WEB_LOG=/data/realm_web_manager.log
 ENV REALM_USERS_FILE=/data/users.json
 ENV REALM_CRON_STATE=/data/restart-schedule.json
 
-RUN mkdir -p /data
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl tar \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /data
 
 VOLUME ["/data"]
 EXPOSE 8765
