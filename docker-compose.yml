@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     network_mode: host
     environment:
-      HOST: "127.0.0.1"
+      HOST: "0.0.0.0"
       PORT: "8765"
       REALM_SESSION_SECRET: "${REALM_SESSION_SECRET}"
       REALM_RUNTIME: "docker"
