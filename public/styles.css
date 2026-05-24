@@ -641,6 +641,20 @@ button:disabled {
   color: #7bd6bb;
 }
 
+.heading-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin-left: 8px;
+  padding: 3px 10px;
+  border: 1px solid rgba(63, 143, 120, 0.3);
+  border-radius: 999px;
+  background: rgba(63, 143, 120, 0.12);
+  color: #3f8f78;
+  font-size: 13px;
+  line-height: 1;
+}
+
 .panel-tools {
   display: flex;
   align-items: center;

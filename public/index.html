@@ -87,14 +87,13 @@
         <section id="rules" class="rules-layout">
           <section class="panel rules-panel">
             <div class="panel-heading">
-              <h2>当前规则</h2>
+              <h2>当前规则 <span id="ruleCount" class="heading-count">0 条</span></h2>
               <div class="panel-tools">
                 <button id="openRuleModalBtn" type="button" class="primary">添加规则</button>
                 <button type="button" id="selectAllRulesBtn" class="ghost">全选本页</button>
                 <button type="button" id="bulkDeleteRulesBtn" class="ghost danger-btn">批量删除</button>
                 <button type="button" id="exportRulesBtn" class="ghost">导出</button>
                 <button type="button" id="importRulesBtn" class="ghost">导入</button>
-                <span id="ruleCount" class="badge">0 条</span>
               </div>
             </div>
             <input id="importRulesFile" class="hidden" type="file" accept="application/json,.json">
