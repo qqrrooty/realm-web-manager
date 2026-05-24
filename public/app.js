@@ -139,8 +139,10 @@ function renderRules() {
           <label class="rule-check">
             <input type="checkbox" data-select-rule="${rule.id}" ${state.selectedRuleIds.has(rule.id) ? "checked" : ""}>
             <span class="rule-title">#${rule.id} ${escapeHtml(rule.remark || "未命名规则")}</span>
+            <span class="status-pill ${rule.enabled === false ? "off" : "on"}">${rule.enabled === false ? "已关闭" : "运行中"}</span>
           </label>
           <div class="rule-actions">
+            <button data-toggle="${rule.id}" data-enabled="${rule.enabled === false ? "true" : "false"}">${rule.enabled === false ? "启动" : "关闭"}</button>
             <button data-edit="${rule.id}">编辑</button>
             <button data-delete="${rule.id}">删除</button>
           </div>
@@ -238,6 +240,13 @@ async function deleteRule(id) {
   await api(`/api/endpoints/${id}`, { method: "DELETE" });
   toast("规则已删除", "ok");
   state.selectedRuleIds.delete(Number(id));
+  await loadStatus();
+  await loadConfig();
+}
+
+async function toggleRule(id, enabled) {
+  await api(`/api/endpoints/${id}/toggle`, { method: "POST", body: { enabled } });
+  toast(enabled ? "规则已启动" : "规则已关闭", "ok");
   await loadStatus();
   await loadConfig();
 }
@@ -419,6 +428,11 @@ function bindEvents() {
     }
     const editId = event.target.dataset.edit;
     const deleteId = event.target.dataset.delete;
+    const toggleId = event.target.dataset.toggle;
+    if (toggleId) {
+      toggleRule(toggleId, event.target.dataset.enabled === "true").catch((error) => toast(error.message, "error"));
+      return;
+    }
     if (editId) {
       const rule = state.endpoints.find((item) => String(item.id) === String(editId));
       if (rule) fillForm(rule);

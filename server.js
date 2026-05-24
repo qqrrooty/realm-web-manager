@@ -173,7 +173,7 @@ function parseConfig(content) {
   const endpointStartIndexes = [];
 
   lines.forEach((line, index) => {
-    if (/^\s*\[\[endpoints\]\]\s*$/.test(line)) endpointStartIndexes.push(index);
+    if (/^\s*(#\s*)?\[\[endpoints\]\]\s*$/.test(line)) endpointStartIndexes.push(index);
   });
 
   for (let i = 0; i < endpointStartIndexes.length; i += 1) {
@@ -189,13 +189,17 @@ function parseConfig(content) {
       balance: "",
       through: "",
       interface: "",
+      enabled: true,
       raw: block.join("\n").trim()
     };
 
     for (const line of block) {
-      const trimmed = line.trim();
+      const trimmed = line.trim().replace(/^(#\s*)+/, "").trim();
+      if (trimmed === "disabled = true") endpoint.enabled = false;
       if (trimmed.startsWith("# 备注:")) endpoint.remark = trimmed.replace(/^# 备注:\s*/, "");
       if (trimmed.startsWith("# remark:")) endpoint.remark = trimmed.replace(/^# remark:\s*/, "");
+      if (trimmed.startsWith("备注:")) endpoint.remark = trimmed.replace(/^备注:\s*/, "");
+      if (trimmed.startsWith("remark:")) endpoint.remark = trimmed.replace(/^remark:\s*/, "");
       if (trimmed.startsWith("listen")) endpoint.listen = parseQuotedValue(trimmed);
       if (trimmed.startsWith("remote")) endpoint.remote = parseQuotedValue(trimmed);
       if (trimmed.startsWith("extra_remotes")) endpoint.extraRemotes = parseArrayValue(trimmed);
@@ -217,6 +221,7 @@ function escapeTomlString(value) {
 
 function endpointToToml(endpoint) {
   const lines = ["", "[[endpoints]]"];
+  if (endpoint.enabled === false) lines.push("disabled = true");
   if (endpoint.remark) lines.push(`# 备注: ${endpoint.remark.replace(/\r?\n/g, " ").trim()}`);
   lines.push(`listen = "${escapeTomlString(endpoint.listen)}"`);
   lines.push(`remote = "${escapeTomlString(endpoint.remote)}"`);
@@ -227,7 +232,13 @@ function endpointToToml(endpoint) {
   if (endpoint.balance) lines.push(`balance = "${escapeTomlString(endpoint.balance)}"`);
   if (endpoint.through) lines.push(`through = "${escapeTomlString(endpoint.through)}"`);
   if (endpoint.interface) lines.push(`interface = "${escapeTomlString(endpoint.interface)}"`);
-  return lines.join("\n");
+  const block = lines.join("\n");
+  return endpoint.enabled === false
+    ? block
+        .split("\n")
+        .map((line) => (line ? `# ${line}` : line))
+        .join("\n")
+    : block;
 }
 
 function buildConfig(header, endpoints) {
@@ -279,7 +290,8 @@ function validateEndpoint(data) {
     extraRemotes,
     balance: String(data.balance || "").trim(),
     through: String(data.through || "").trim(),
-    interface: String(data.interface || "").trim()
+    interface: String(data.interface || "").trim(),
+    enabled: data.enabled !== false
   };
 }
 
@@ -693,6 +705,19 @@ async function handleApi(req, res, pathname) {
       await writeConfig(parsed);
       await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
       await log(`更新规则 #${id}`);
+      return sendJson(res, 200, { ok: true });
+    }
+
+    const toggleMatch = pathname.match(/^\/api\/endpoints\/(\d+)\/toggle$/);
+    if (toggleMatch && req.method === "POST") {
+      const id = Number(toggleMatch[1]);
+      const body = await readBody(req);
+      const parsed = await readConfig();
+      if (!parsed.endpoints[id - 1]) throw new Error("规则不存在");
+      parsed.endpoints[id - 1].enabled = body.enabled !== false;
+      await writeConfig(parsed);
+      await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
+      await log(`${parsed.endpoints[id - 1].enabled ? "启用" : "关闭"}规则 #${id}`);
       return sendJson(res, 200, { ok: true });
     }
 

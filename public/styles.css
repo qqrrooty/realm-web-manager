@@ -70,28 +70,30 @@ body {
 
 .app-shell {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 286px minmax(0, 1fr);
 }
 
 .sidebar {
   position: sticky;
   top: 0;
   z-index: 20;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   gap: 22px;
-  min-height: 64px;
-  padding: 0 28px;
+  padding: 28px 16px;
   background: #ffffff;
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 3px 14px rgba(31, 35, 41, 0.05);
+  border-right: 1px solid var(--line);
+  box-shadow: 6px 0 18px rgba(31, 35, 41, 0.04);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 11px;
-  min-width: 220px;
+  min-width: 0;
+  padding: 0 12px 8px;
 }
 
 .brand-mark {
@@ -118,24 +120,39 @@ body {
 
 .nav {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  overflow-x: auto;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.nav a {
+.nav a,
+.logout-link {
+  display: flex;
+  align-items: center;
+  min-height: 54px;
   color: #4b5563;
   text-decoration: none;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 14px;
+  padding: 12px 22px;
+  border-radius: 14px;
+  font-size: 20px;
+  border: 0;
+  box-shadow: none;
   white-space: nowrap;
+  background: transparent;
 }
 
 .nav a:hover,
-.nav a.active {
-  color: var(--accent);
-  background: #e6f4ff;
+.nav a.active,
+.logout-link:hover {
+  color: #ffffff;
+  background: #2f705f;
+}
+
+.logout-link {
+  width: 100%;
+  margin-top: auto;
+  cursor: pointer;
+  text-align: left;
 }
 
 .workspace {
@@ -221,13 +238,14 @@ textarea {
 
 button {
   border: 1px solid #d9d9d9;
-  border-radius: 10px;
-  padding: 8px 13px;
+  border-radius: 999px;
+  padding: 9px 18px;
   background: #fff;
   color: var(--text);
   cursor: pointer;
   white-space: nowrap;
   transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
 }
 
 button:hover {
@@ -237,20 +255,25 @@ button:hover {
 
 .primary,
 .actions button:first-child {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: #3f8f78;
+  border-color: #3f8f78;
   color: #fff;
-  box-shadow: 0 2px 0 rgba(5, 145, 255, 0.1);
+  box-shadow: 0 6px 12px rgba(33, 95, 80, 0.24);
 }
 
 .primary:hover,
 .actions button:first-child:hover {
-  background: var(--accent-dark);
+  background: #337a66;
   color: #fff;
 }
 
 .ghost {
   background: #fff;
+}
+
+.actions button {
+  min-height: 42px;
+  padding-inline: 20px;
 }
 
 .danger-btn {
@@ -368,7 +391,7 @@ button:hover {
 }
 
 .panel-tools button {
-  padding: 6px 10px;
+  padding: 7px 13px;
   font-size: 13px;
 }
 
@@ -438,6 +461,28 @@ label {
   color: var(--text);
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.status-pill.on {
+  color: #389e0d;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.status-pill.off {
+  color: #8c8c8c;
+  background: #f5f5f5;
+  border: 1px solid #d9d9d9;
+}
+
 .rule-check input {
   width: 16px;
   height: 16px;
@@ -450,7 +495,7 @@ label {
 }
 
 .rule-actions button {
-  padding: 5px 10px;
+  padding: 6px 12px;
   font-size: 13px;
 }
 
@@ -562,11 +607,17 @@ label {
 }
 
 @media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
   .sidebar {
     position: static;
-    grid-template-columns: 1fr;
+    height: auto;
     gap: 12px;
     padding: 14px 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   .brand {
@@ -574,7 +625,12 @@ label {
   }
 
   .nav {
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .logout-link {
+    margin-top: 0;
   }
 
   .layout,
@@ -605,5 +661,16 @@ label {
 
   .panel-tools {
     justify-content: flex-start;
+  }
+
+  .nav {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .nav a,
+  .logout-link {
+    min-height: 46px;
+    padding: 10px 14px;
+    font-size: 15px;
   }
 }
