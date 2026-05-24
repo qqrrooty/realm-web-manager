@@ -229,6 +229,12 @@ function serviceStateText(value) {
   return stateText[value] || value || "未知";
 }
 
+function realmVersionText(value) {
+  const match = String(value || "").match(/realm\s+v?(\d+(?:\.\d+){1,3})|v?(\d+(?:\.\d+){1,3})/i);
+  const version = match && (match[1] || match[2]);
+  return version ? `Realm ${version}` : "未知版本";
+}
+
 async function checkSession() {
   const data = await api("/api/session");
   state.needsSetup = Boolean(data.needsSetup);
@@ -247,7 +253,7 @@ async function loadStatus() {
   state.selectedRuleIds = new Set([...state.selectedRuleIds].filter((id) => state.endpoints.some((item) => item.id === id)));
   const active = data.status?.active || "unknown";
   const installed = Boolean(data.status?.installed);
-  const realmVersion = data.status?.realmVersion || "未知版本";
+  const realmVersion = realmVersionText(data.status?.realmVersion);
   setStateText($("#serviceState"), serviceStateText(active), active === "active" ? "state-ok" : "state-bad");
   setStateText($("#installState"), installed ? `已安装 / ${realmVersion}` : "未安装", installed ? "state-ok" : "state-warn");
   $("#configPath").textContent = data.configFile || "-";
