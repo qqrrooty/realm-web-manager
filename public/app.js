@@ -182,7 +182,7 @@ function renderRules() {
           <label class="rule-check">
             <input type="checkbox" data-select-rule="${rule.id}" ${state.selectedRuleIds.has(rule.id) ? "checked" : ""}>
             <button class="switch ${rule.enabled === false ? "" : "on"}" data-toggle="${rule.id}" data-enabled="${rule.enabled === false ? "true" : "false"}" aria-label="${rule.enabled === false ? "启动规则" : "关闭规则"}" type="button"></button>
-            <span class="rule-title">#${rule.id} ${escapeHtml(rule.remark || "未命名规则")}</span>
+            <span class="rule-title">#${rule.id}</span>
             <span class="status-pill ${rule.enabled === false ? "off" : "on"}">${rule.enabled === false ? "已关闭" : "运行中"}</span>
           </label>
           <div class="rule-actions">
@@ -190,6 +190,7 @@ function renderRules() {
             <button data-delete="${rule.id}">删除</button>
           </div>
         </div>
+        <div class="rule-remark">${escapeHtml(rule.remark || "未命名规则")}</div>
         <div class="pair"><span>listen</span><code>${escapeHtml(rule.listen || "-")}</code></div>
         <div class="pair"><span>remote</span><code>${escapeHtml(rule.remote || "-")}</code></div>
         ${

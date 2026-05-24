@@ -396,16 +396,14 @@ button:disabled {
   box-shadow: none;
 }
 
-.primary,
-.actions button:first-child {
+.primary {
   background: #3f8f78;
   border-color: #3f8f78;
   color: #fff;
   box-shadow: 0 6px 12px rgba(33, 95, 80, 0.24);
 }
 
-.primary:hover,
-.actions button:first-child:hover {
+.primary:hover {
   background: #337a66;
   color: #fff;
 }
@@ -419,8 +417,10 @@ button:disabled {
 }
 
 .actions button {
-  min-height: 42px;
-  padding-inline: 20px;
+  min-height: 32px;
+  padding: 5px 12px;
+  font-size: 13px;
+  box-shadow: none;
 }
 
 .danger-btn {
@@ -463,7 +463,10 @@ button:disabled {
 
 .actions {
   flex-wrap: wrap;
-  padding: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
   margin-bottom: 16px;
   background: #fff;
   border: 1px solid var(--soft-line);
@@ -629,12 +632,20 @@ button:disabled {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .panel-tools button {
-  padding: 7px 13px;
+  min-height: 32px;
+  padding: 5px 12px;
   font-size: 13px;
+  box-shadow: none;
+}
+
+.panel-tools .primary {
+  background: #3f8f78;
+  border-color: #3f8f78;
+  color: #fff;
 }
 
 label {
@@ -751,8 +762,17 @@ label {
 }
 
 .rule-title {
+  flex: 0 0 auto;
   font-weight: 400;
   overflow-wrap: anywhere;
+}
+
+.rule-remark {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.55;
 }
 
 .rule-check {
@@ -767,6 +787,7 @@ label {
 .status-pill {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   min-height: 22px;
   padding: 2px 8px;
   border-radius: 999px;
@@ -1049,7 +1070,7 @@ label {
   }
 
   .panel-heading {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
   }
 
@@ -1086,6 +1107,46 @@ label {
   }
 
   .modal-footer {
+    flex-wrap: wrap;
+  }
+
+  .rule {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .rule-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rule-check {
+    width: 100%;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .rule-title {
+    flex: 0 0 auto;
+  }
+
+  .status-pill {
+    min-height: 28px;
+    padding: 4px 12px;
+  }
+
+  .rule-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .pair {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .pagination {
+    justify-content: center;
     flex-wrap: wrap;
   }
 }
