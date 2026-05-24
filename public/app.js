@@ -1,6 +1,7 @@
 const state = {
   endpoints: [],
-  needsSetup: false
+  needsSetup: false,
+  selectedRuleIds: new Set()
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -66,6 +67,30 @@ function updateListenFields() {
   $("#listenPreview").value = listen;
 }
 
+function assertPortRange(value, label) {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`${label}端口必须在 1-65535 之间`);
+  }
+}
+
+function assertAddressPort(value, label) {
+  const match = String(value || "").trim().match(/:(\d+)$/);
+  if (!match) throw new Error(`${label}缺少端口`);
+  assertPortRange(match[1], label);
+}
+
+function getAddressPort(value) {
+  const match = String(value || "").trim().match(/:(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function assertUniqueListenPort(listen, currentId) {
+  const port = getAddressPort(listen);
+  const used = state.endpoints.find((rule) => rule.id !== Number(currentId || 0) && getAddressPort(rule.listen) === port);
+  if (used) throw new Error(`本地端口 ${port} 已被规则 #${used.id} 使用`);
+}
+
 function resetForm() {
   $("#ruleId").value = "";
   $("#formTitle").textContent = "添加转发规则";
@@ -111,7 +136,10 @@ function renderRules() {
       (rule) => `
       <article class="rule">
         <div class="rule-head">
-          <div class="rule-title">#${rule.id} ${escapeHtml(rule.remark || "未命名规则")}</div>
+          <label class="rule-check">
+            <input type="checkbox" data-select-rule="${rule.id}" ${state.selectedRuleIds.has(rule.id) ? "checked" : ""}>
+            <span class="rule-title">#${rule.id} ${escapeHtml(rule.remark || "未命名规则")}</span>
+          </label>
           <div class="rule-actions">
             <button data-edit="${rule.id}">编辑</button>
             <button data-delete="${rule.id}">删除</button>
@@ -158,6 +186,7 @@ async function checkSession() {
 async function loadStatus() {
   const data = await api("/api/status");
   state.endpoints = data.endpoints || [];
+  state.selectedRuleIds = new Set([...state.selectedRuleIds].filter((id) => state.endpoints.some((item) => item.id === id)));
   const active = data.status?.active || "unknown";
   const installed = Boolean(data.status?.installed);
   setStateText($("#serviceState"), active, active === "active" ? "state-ok" : "state-bad");
@@ -176,6 +205,14 @@ async function loadConfig() {
 async function saveRule(event) {
   event.preventDefault();
   updateListenFields();
+  assertAddressPort($("#listen").value, "本地监听");
+  assertUniqueListenPort($("#listen").value, $("#ruleId").value);
+  assertAddressPort($("#remote").value, "目标地址");
+  String($("#extraRemotes").value || "")
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((item) => assertAddressPort(item, "备用目标"));
   const id = $("#ruleId").value;
   const body = {
     remark: $("#remark").value,
@@ -200,8 +237,31 @@ async function deleteRule(id) {
   if (!confirm(`确认删除规则 #${id}？`)) return;
   await api(`/api/endpoints/${id}`, { method: "DELETE" });
   toast("规则已删除", "ok");
+  state.selectedRuleIds.delete(Number(id));
   await loadStatus();
   await loadConfig();
+}
+
+async function bulkDeleteRules() {
+  const ids = [...state.selectedRuleIds].sort((a, b) => a - b);
+  if (!ids.length) throw new Error("请选择要删除的规则");
+  if (!confirm(`确认删除选中的 ${ids.length} 条规则？`)) return;
+  const data = await api("/api/endpoints/bulk-delete", { method: "POST", body: { ids } });
+  state.selectedRuleIds.clear();
+  toast(`已删除 ${data.deleted || ids.length} 条规则`, "ok");
+  resetForm();
+  await loadStatus();
+  await loadConfig();
+}
+
+function toggleSelectAllRules() {
+  if (!state.endpoints.length) return;
+  if (state.selectedRuleIds.size === state.endpoints.length) {
+    state.selectedRuleIds.clear();
+  } else {
+    state.selectedRuleIds = new Set(state.endpoints.map((rule) => rule.id));
+  }
+  renderRules();
 }
 
 async function serviceAction(action) {
@@ -269,6 +329,7 @@ async function importRules(file) {
   if (!count) throw new Error("备份文件里没有规则");
   if (!confirm(`确认导入 ${count} 条规则？当前规则会被覆盖。`)) return;
   await api("/api/endpoints/import", { method: "POST", body: data });
+  state.selectedRuleIds.clear();
   toast(`已导入 ${count} 条规则`, "ok");
   resetForm();
   await loadStatus();
@@ -320,6 +381,8 @@ function bindEvents() {
   $("#listenCustom").addEventListener("input", updateListenFields);
   $("#exportRulesBtn").addEventListener("click", () => exportRules().catch((error) => toast(error.message, "error")));
   $("#importRulesBtn").addEventListener("click", () => $("#importRulesFile").click());
+  $("#selectAllRulesBtn").addEventListener("click", toggleSelectAllRules);
+  $("#bulkDeleteRulesBtn").addEventListener("click", () => bulkDeleteRules().catch((error) => toast(error.message, "error")));
   $("#importRulesFile").addEventListener("change", async (event) => {
     try {
       await importRules(event.target.files[0]);
@@ -347,6 +410,13 @@ function bindEvents() {
     serviceAction(action).catch((error) => toast(error.message, "error"));
   });
   $("#rulesList").addEventListener("click", (event) => {
+    const selectId = event.target.dataset.selectRule;
+    if (selectId) {
+      const id = Number(selectId);
+      if (event.target.checked) state.selectedRuleIds.add(id);
+      else state.selectedRuleIds.delete(id);
+      return;
+    }
     const editId = event.target.dataset.edit;
     const deleteId = event.target.dataset.delete;
     if (editId) {

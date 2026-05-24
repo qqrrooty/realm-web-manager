@@ -263,12 +263,15 @@ function validateEndpoint(data) {
     throw new Error("listen 格式应类似 0.0.0.0:8080 或 [::]:8080");
   }
   if (!/^.+:\d+$/.test(remote)) throw new Error("remote 格式应类似 example.com:443 或 1.2.3.4:443");
+  assertAddressPort(listen, "listen");
+  assertAddressPort(remote, "remote");
   const extraRemotes = Array.isArray(data.extraRemotes)
     ? data.extraRemotes
     : String(data.extraRemotes || "")
         .split(/\r?\n|,/)
         .map((item) => item.trim())
         .filter(Boolean);
+  extraRemotes.forEach((item) => assertAddressPort(item, "extra_remotes"));
   return {
     remark: String(data.remark || "").trim(),
     listen,
@@ -278,6 +281,31 @@ function validateEndpoint(data) {
     through: String(data.through || "").trim(),
     interface: String(data.interface || "").trim()
   };
+}
+
+function assertAddressPort(value, name) {
+  const match = String(value).trim().match(/:(\d+)$/);
+  if (!match) throw new Error(`${name} 缺少端口`);
+  const port = Number(match[1]);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`${name} 端口必须在 1-65535 之间`);
+  }
+}
+
+function getPort(value) {
+  const match = String(value || "").trim().match(/:(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function assertUniqueListenPorts(endpoints, ignoreIndex = -1) {
+  const used = new Map();
+  endpoints.forEach((endpoint, index) => {
+    if (index === ignoreIndex) return;
+    const port = getPort(endpoint.listen);
+    if (!port) return;
+    if (used.has(port)) throw new Error(`本地监听端口 ${port} 已被规则 #${used.get(port) + 1} 使用`);
+    used.set(port, index);
+  });
 }
 
 async function systemdStatus() {
@@ -619,7 +647,9 @@ async function handleApi(req, res, pathname) {
     if (req.method === "POST" && pathname === "/api/endpoints") {
       const body = await readBody(req);
       const parsed = await readConfig();
-      parsed.endpoints.push(validateEndpoint(body));
+      const endpoint = validateEndpoint(body);
+      assertUniqueListenPorts([...parsed.endpoints, endpoint]);
+      parsed.endpoints.push(endpoint);
       await writeConfig(parsed);
       await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
       await log(`添加规则: ${body.listen} -> ${body.remote}`);
@@ -642,6 +672,7 @@ async function handleApi(req, res, pathname) {
       if (!endpoints.length) throw new Error("备份文件里没有可导入的规则");
       const parsed = await readConfig();
       parsed.endpoints = endpoints.map(validateEndpoint);
+      assertUniqueListenPorts(parsed.endpoints);
       await writeConfig(parsed);
       await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
       await log(`导入规则备份，共 ${parsed.endpoints.length} 条`);
@@ -654,11 +685,33 @@ async function handleApi(req, res, pathname) {
       const body = await readBody(req);
       const parsed = await readConfig();
       if (!parsed.endpoints[id - 1]) throw new Error("规则不存在");
-      parsed.endpoints[id - 1] = validateEndpoint(body);
+      const endpoint = validateEndpoint(body);
+      const nextEndpoints = [...parsed.endpoints];
+      nextEndpoints[id - 1] = endpoint;
+      assertUniqueListenPorts(nextEndpoints);
+      parsed.endpoints = nextEndpoints;
       await writeConfig(parsed);
       await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
       await log(`更新规则 #${id}`);
       return sendJson(res, 200, { ok: true });
+    }
+
+    if (req.method === "POST" && pathname === "/api/endpoints/bulk-delete") {
+      const body = await readBody(req);
+      const ids = Array.isArray(body.ids)
+        ? [...new Set(body.ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))]
+        : [];
+      if (!ids.length) throw new Error("请选择要删除的规则");
+      const parsed = await readConfig();
+      const idSet = new Set(ids);
+      const before = parsed.endpoints.length;
+      parsed.endpoints = parsed.endpoints.filter((_, index) => !idSet.has(index + 1));
+      const deleted = before - parsed.endpoints.length;
+      if (!deleted) throw new Error("没有匹配到可删除的规则");
+      await writeConfig(parsed);
+      await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
+      await log(`批量删除规则，共 ${deleted} 条`);
+      return sendJson(res, 200, { ok: true, deleted });
     }
 
     if (endpointMatch && req.method === "DELETE") {

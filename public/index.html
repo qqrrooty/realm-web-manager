@@ -9,7 +9,7 @@
   <body>
     <section id="loginView" class="login-view">
       <form id="loginForm" class="login-panel">
-        <p class="eyebrow">zhboner/realm</p>
+        <p class="eyebrow">Web Manager</p>
         <h1 id="loginTitle">Realm Web Manager</h1>
         <p id="loginHint" class="login-hint">登录后进入管理面板</p>
         <label>
@@ -49,7 +49,7 @@
       <section class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">zhboner/realm</p>
+            <p class="eyebrow">Web Manager</p>
             <h1>Realm 转发管理</h1>
           </div>
           <div class="top-actions">
@@ -102,7 +102,7 @@
             <div id="listenPresetFields" class="two">
               <label>
                 本地端口
-                <input id="listenPort" inputmode="numeric" placeholder="例如 443">
+                <input id="listenPort" type="number" min="1" max="65535" inputmode="numeric" placeholder="例如 443">
               </label>
               <label>
                 生成监听地址
@@ -122,16 +122,14 @@
               备用目标 extra_remotes
               <textarea id="extraRemotes" rows="3" placeholder="每行一个，例如 5.6.7.8:443"></textarea>
             </label>
-            <div class="two">
-              <label>
-                负载策略 balance
-                <input id="balance" placeholder="可选，例如 roundrobin: 4, 2, 1">
-              </label>
-              <label>
-                出口 through
-                <input id="through" placeholder="可选，本机出口 IP">
-              </label>
-            </div>
+            <label>
+              负载策略 balance
+              <input id="balance" placeholder="可选，例如 roundrobin: 4, 2, 1">
+            </label>
+            <label>
+              出口 through
+              <input id="through" placeholder="可选，本机出口 IP">
+            </label>
             <label>
               网卡 interface
               <input id="interfaceName" placeholder="可选，例如 eth0">
@@ -143,6 +141,8 @@
             <div class="panel-heading">
               <h2>当前规则</h2>
               <div class="panel-tools">
+                <button type="button" id="selectAllRulesBtn" class="ghost">全选</button>
+                <button type="button" id="bulkDeleteRulesBtn" class="ghost danger-btn">批量删除</button>
                 <button type="button" id="exportRulesBtn" class="ghost">导出</button>
                 <button type="button" id="importRulesBtn" class="ghost">导入</button>
                 <span id="ruleCount" class="badge">0 条</span>
