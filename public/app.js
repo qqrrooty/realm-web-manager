@@ -1,12 +1,16 @@
 const state = {
   endpoints: [],
   needsSetup: false,
-  selectedRuleIds: new Set()
+  selectedRuleIds: new Set(),
+  rulesPage: 1,
+  rulesPageSize: 8
 };
 
 const $ = (selector) => document.querySelector(selector);
 const savedTheme = localStorage.getItem("realmTheme") || "light";
 document.documentElement.dataset.theme = savedTheme;
+const savedSidebarValue = localStorage.getItem("realmSidebarCollapsed");
+const savedSidebarCollapsed = savedSidebarValue === null ? window.matchMedia("(max-width: 720px)").matches : savedSidebarValue === "true";
 
 function toast(message, type = "info") {
   const el = $("#toast");
@@ -47,12 +51,26 @@ function showApp() {
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   localStorage.setItem("realmTheme", theme);
-  if ($("#themeToggleBtn")) $("#themeToggleBtn").textContent = theme === "dark" ? "浅色" : "暗色";
+  if ($("#themeToggleBtn")) $("#themeToggleBtn .nav-text").textContent = theme === "dark" ? "浅色" : "暗色";
+}
+
+function setSidebarCollapsed(collapsed) {
+  $("#appView").classList.toggle("sidebar-collapsed", collapsed);
+  localStorage.setItem("realmSidebarCollapsed", String(collapsed));
+  $("#sidebarToggleBtn").textContent = collapsed ? "›" : "‹";
 }
 
 function setAdvancedOptions(open) {
   $("#advancedOptions").classList.toggle("hidden", !open);
   $("#advancedToggleBtn").textContent = open ? "收起高级选项" : "高级选项";
+}
+
+function openRuleModal() {
+  $("#ruleModal").classList.remove("hidden");
+}
+
+function closeRuleModal() {
+  $("#ruleModal").classList.add("hidden");
 }
 
 function parseListen(listen) {
@@ -107,6 +125,7 @@ function assertUniqueListenPort(listen, currentId) {
 function resetForm() {
   $("#ruleId").value = "";
   $("#formTitle").textContent = "添加转发规则";
+  document.querySelector('#ruleForm button[type="submit"]').textContent = "创建";
   $("#remark").value = "";
   $("#listenMode").value = "ipv6";
   $("#listenPort").value = "";
@@ -123,6 +142,7 @@ function resetForm() {
 function fillForm(rule) {
   $("#ruleId").value = rule.id;
   $("#formTitle").textContent = `编辑规则 #${rule.id}`;
+  document.querySelector('#ruleForm button[type="submit"]').textContent = "保存";
   $("#remark").value = rule.remark || "";
   const parsedListen = parseListen(rule.listen || "");
   $("#listenMode").value = parsedListen.mode;
@@ -136,17 +156,25 @@ function fillForm(rule) {
   $("#interfaceName").value = rule.interface || "";
   setAdvancedOptions(Boolean((rule.extraRemotes || []).length || rule.balance || rule.through || rule.interface));
   updateListenFields();
+  openRuleModal();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderRules() {
   const box = $("#rulesList");
   $("#ruleCount").textContent = `${state.endpoints.length} 条`;
+  const totalPages = Math.max(1, Math.ceil(state.endpoints.length / state.rulesPageSize));
+  state.rulesPage = Math.min(Math.max(1, state.rulesPage), totalPages);
+  const start = (state.rulesPage - 1) * state.rulesPageSize;
+  const pageRules = state.endpoints.slice(start, start + state.rulesPageSize);
+  $("#rulesPageInfo").textContent = `${state.rulesPage} / ${totalPages}`;
+  $("#prevRulesPageBtn").disabled = state.rulesPage <= 1;
+  $("#nextRulesPageBtn").disabled = state.rulesPage >= totalPages;
   if (!state.endpoints.length) {
     box.innerHTML = '<p class="empty">还没有转发规则。</p>';
     return;
   }
-  box.innerHTML = state.endpoints
+  box.innerHTML = pageRules
     .map(
       (rule) => `
       <article class="rule">
@@ -246,7 +274,10 @@ async function saveRule(event) {
   });
   toast("规则已保存，Realm 已尝试重启", "ok");
   resetForm();
+  closeRuleModal();
   await loadStatus();
+  state.rulesPage = Math.max(1, Math.ceil(state.endpoints.length / state.rulesPageSize));
+  renderRules();
   await loadConfig();
 }
 
@@ -279,12 +310,20 @@ async function bulkDeleteRules() {
 }
 
 function toggleSelectAllRules() {
-  if (!state.endpoints.length) return;
-  if (state.selectedRuleIds.size === state.endpoints.length) {
-    state.selectedRuleIds.clear();
+  const start = (state.rulesPage - 1) * state.rulesPageSize;
+  const pageRules = state.endpoints.slice(start, start + state.rulesPageSize);
+  if (!pageRules.length) return;
+  const allSelected = pageRules.every((rule) => state.selectedRuleIds.has(rule.id));
+  if (allSelected) {
+    pageRules.forEach((rule) => state.selectedRuleIds.delete(rule.id));
   } else {
-    state.selectedRuleIds = new Set(state.endpoints.map((rule) => rule.id));
+    pageRules.forEach((rule) => state.selectedRuleIds.add(rule.id));
   }
+  renderRules();
+}
+
+function changeRulesPage(delta) {
+  state.rulesPage += delta;
   renderRules();
 }
 
@@ -362,6 +401,14 @@ async function importRules(file) {
 
 function bindEvents() {
   setTheme(savedTheme);
+  setSidebarCollapsed(savedSidebarCollapsed);
+  $("#openRuleModalBtn").addEventListener("click", () => {
+    resetForm();
+    openRuleModal();
+  });
+  $("#closeRuleModalBtn").addEventListener("click", closeRuleModal);
+  $("#cancelRuleModalBtn").addEventListener("click", closeRuleModal);
+  $("#ruleModalBackdrop").addEventListener("click", closeRuleModal);
   $("#loginForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -394,6 +441,10 @@ function bindEvents() {
   $("#themeToggleBtn").addEventListener("click", () => {
     setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   });
+  $("#sidebarToggleBtn").addEventListener("click", () => {
+    setSidebarCollapsed(!$("#appView").classList.contains("sidebar-collapsed"));
+  });
+  $("#sidebarMobileOverlay").addEventListener("click", () => setSidebarCollapsed(true));
   $("#refreshBtn").addEventListener("click", async () => {
     try {
       await loadStatus();
@@ -414,6 +465,8 @@ function bindEvents() {
   $("#importRulesBtn").addEventListener("click", () => $("#importRulesFile").click());
   $("#selectAllRulesBtn").addEventListener("click", toggleSelectAllRules);
   $("#bulkDeleteRulesBtn").addEventListener("click", () => bulkDeleteRules().catch((error) => toast(error.message, "error")));
+  $("#prevRulesPageBtn").addEventListener("click", () => changeRulesPage(-1));
+  $("#nextRulesPageBtn").addEventListener("click", () => changeRulesPage(1));
   $("#importRulesFile").addEventListener("change", async (event) => {
     try {
       await importRules(event.target.files[0]);

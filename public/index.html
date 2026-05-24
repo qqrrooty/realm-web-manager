@@ -29,6 +29,7 @@
     </section>
 
     <main id="appView" class="app-shell hidden">
+      <div id="sidebarMobileOverlay" class="sidebar-mobile-overlay"></div>
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-mark">R</div>
@@ -38,14 +39,15 @@
           </div>
         </div>
         <nav class="nav">
-          <button id="themeToggleBtn" class="theme-link" type="button">主题</button>
-          <a class="active" href="#dashboard">仪表盘</a>
-          <a href="#rules">转发规则</a>
-          <a href="#tasks">定时任务</a>
-          <a href="#config">配置文件</a>
-          <a href="#logs">运行日志</a>
-          <button id="logoutBtn" class="logout-link" type="button">退出登录</button>
+          <button id="themeToggleBtn" class="theme-link" type="button"><span class="nav-icon">◐</span><span class="nav-text">主题</span></button>
+          <a class="active" href="#dashboard"><span class="nav-icon">◴</span><span class="nav-text">仪表盘</span></a>
+          <a href="#rules"><span class="nav-icon">♙</span><span class="nav-text">转发规则</span></a>
+          <a href="#tasks"><span class="nav-icon">◷</span><span class="nav-text">定时任务</span></a>
+          <a href="#config"><span class="nav-icon">⚙</span><span class="nav-text">配置文件</span></a>
+          <a href="#logs"><span class="nav-icon">☰</span><span class="nav-text">运行日志</span></a>
+          <button id="logoutBtn" class="logout-link" type="button"><span class="nav-icon">↪</span><span class="nav-text">退出登录</span></button>
         </nav>
+        <button id="sidebarToggleBtn" class="sidebar-toggle" type="button">‹</button>
       </aside>
 
       <section class="workspace">
@@ -75,77 +77,19 @@
         </section>
 
         <section class="actions">
+          <button id="openRuleModalBtn" type="button">添加规则</button>
           <button data-action="install">安装/更新 Realm</button>
           <button data-action="start">启动</button>
           <button data-action="stop">停止</button>
           <button data-action="restart">重启</button>
         </section>
 
-        <section id="rules" class="layout">
-          <form id="ruleForm" class="panel">
-            <div class="panel-heading">
-              <h2 id="formTitle">添加转发规则</h2>
-              <button type="button" id="resetFormBtn" class="ghost">清空</button>
-            </div>
-            <input type="hidden" id="ruleId">
-            <label>
-              备注
-              <input id="remark" placeholder="例如：香港入口到落地机">
-            </label>
-            <label>
-              监听模式
-              <select id="listenMode">
-                <option value="ipv6">IPv6 / 双栈 [::]</option>
-                <option value="ipv4">IPv4 0.0.0.0</option>
-                <option value="custom">自定义</option>
-              </select>
-            </label>
-            <div id="listenPresetFields" class="two">
-              <label>
-                本地端口
-                <input id="listenPort" type="number" min="1" max="65535" inputmode="numeric" placeholder="1-65535">
-              </label>
-              <label>
-                生成监听地址
-                <input id="listenPreview" readonly placeholder="[::]:443">
-              </label>
-            </div>
-            <label id="listenCustomLabel" class="hidden">
-              自定义 listen
-              <input id="listenCustom" placeholder="例如 127.0.0.1:8080 或 [::1]:443">
-            </label>
-            <input id="listen" type="hidden" required>
-            <label>
-              目标地址 remote
-              <input id="remote" required placeholder="1.2.3.4:443">
-            </label>
-            <button id="advancedToggleBtn" type="button" class="advanced-toggle">高级选项</button>
-            <section id="advancedOptions" class="advanced-options hidden">
-              <label>
-                备用目标地址 extra_remotes
-                <textarea id="extraRemotes" rows="3" placeholder="每行一个地址，例如 5.6.7.8:443"></textarea>
-              </label>
-              <label>
-                负载策略 balance
-                <input id="balance" placeholder="可选，例如 roundrobin: 4, 2, 1">
-              </label>
-              <label>
-                出口 through
-                <input id="through" placeholder="可选，本机出口 IP">
-              </label>
-              <label>
-                网卡 interface
-                <input id="interfaceName" placeholder="可选，例如 eth0">
-              </label>
-            </section>
-            <button class="primary" type="submit">保存规则</button>
-          </form>
-
+        <section id="rules" class="rules-layout">
           <section class="panel rules-panel">
             <div class="panel-heading">
               <h2>当前规则</h2>
               <div class="panel-tools">
-                <button type="button" id="selectAllRulesBtn" class="ghost">全选</button>
+                <button type="button" id="selectAllRulesBtn" class="ghost">全选本页</button>
                 <button type="button" id="bulkDeleteRulesBtn" class="ghost danger-btn">批量删除</button>
                 <button type="button" id="exportRulesBtn" class="ghost">导出</button>
                 <button type="button" id="importRulesBtn" class="ghost">导入</button>
@@ -154,6 +98,11 @@
             </div>
             <input id="importRulesFile" class="hidden" type="file" accept="application/json,.json">
             <div id="rulesList" class="rules"></div>
+            <div class="pagination">
+              <button type="button" id="prevRulesPageBtn" class="ghost">上一页</button>
+              <span id="rulesPageInfo">1 / 1</span>
+              <button type="button" id="nextRulesPageBtn" class="ghost">下一页</button>
+            </div>
           </section>
         </section>
 
@@ -191,6 +140,74 @@
         </section>
       </section>
     </main>
+
+    <div id="ruleModal" class="modal hidden">
+      <div class="modal-backdrop" id="ruleModalBackdrop"></div>
+      <form id="ruleForm" class="modal-card">
+        <div class="modal-heading">
+          <h2 id="formTitle">添加转发规则</h2>
+          <button type="button" id="closeRuleModalBtn" class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="ruleId">
+          <label>
+            备注
+            <input id="remark" placeholder="例如：香港入口到落地机">
+          </label>
+          <label>
+            监听模式
+            <select id="listenMode">
+              <option value="ipv6">IPv6 / 双栈 [::]</option>
+              <option value="ipv4">IPv4 0.0.0.0</option>
+              <option value="custom">自定义</option>
+            </select>
+          </label>
+          <div id="listenPresetFields" class="two">
+            <label>
+              本地端口
+              <input id="listenPort" type="number" min="1" max="65535" inputmode="numeric" placeholder="1-65535">
+            </label>
+            <label>
+              生成监听地址
+              <input id="listenPreview" readonly placeholder="[::]:443">
+            </label>
+          </div>
+          <label id="listenCustomLabel" class="hidden">
+            自定义 listen
+            <input id="listenCustom" placeholder="例如 127.0.0.1:8080 或 [::1]:443">
+          </label>
+          <input id="listen" type="hidden" required>
+          <label>
+            目标地址 remote
+            <input id="remote" required placeholder="1.2.3.4:443">
+          </label>
+          <button id="advancedToggleBtn" type="button" class="advanced-toggle">高级选项</button>
+          <section id="advancedOptions" class="advanced-options hidden">
+            <label>
+              备用目标地址 extra_remotes
+              <textarea id="extraRemotes" rows="3" placeholder="每行一个地址，例如 5.6.7.8:443"></textarea>
+            </label>
+            <label>
+              负载策略 balance
+              <input id="balance" placeholder="可选，例如 roundrobin: 4, 2, 1">
+            </label>
+            <label>
+              出口 through
+              <input id="through" placeholder="可选，本机出口 IP">
+            </label>
+            <label>
+              网卡 interface
+              <input id="interfaceName" placeholder="可选，例如 eth0">
+            </label>
+          </section>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="resetFormBtn" class="ghost">清空</button>
+          <button type="button" id="cancelRuleModalBtn" class="ghost">关闭</button>
+          <button class="primary" type="submit">创建</button>
+        </div>
+      </form>
+    </div>
 
     <div id="toast" class="toast"></div>
     <script src="/app.js"></script>

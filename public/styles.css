@@ -109,6 +109,15 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 214px minmax(0, 1fr);
+  transition: grid-template-columns 0.18s ease;
+}
+
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 82px minmax(0, 1fr);
+}
+
+.sidebar-mobile-overlay {
+  display: none;
 }
 
 .sidebar {
@@ -131,6 +140,16 @@ body {
   gap: 11px;
   min-width: 0;
   padding: 0 26px 8px;
+}
+
+.sidebar-collapsed .brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.sidebar-collapsed .brand > div:not(.brand-mark) {
+  display: none;
 }
 
 .brand-mark {
@@ -172,6 +191,7 @@ body {
 .theme-link {
   display: flex;
   align-items: center;
+  gap: 14px;
   min-height: 44px;
   color: #4b5563;
   text-decoration: none;
@@ -183,6 +203,31 @@ body {
   box-shadow: none;
   white-space: nowrap;
   background: transparent;
+}
+
+.nav-icon {
+  width: 20px;
+  flex: 0 0 20px;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.nav-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-collapsed .nav a,
+.sidebar-collapsed .logout-link,
+.sidebar-collapsed .theme-link {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.sidebar-collapsed .nav-text {
+  display: none;
 }
 
 .nav a:hover,
@@ -202,6 +247,23 @@ body {
 
 .logout-link {
   margin-top: auto;
+}
+
+.sidebar-toggle {
+  width: 44px;
+  height: 44px;
+  margin: 12px auto 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: #4b5563;
+  font-size: 28px;
+  line-height: 1;
+}
+
+:root[data-theme="dark"] .sidebar-toggle {
+  color: #d6dde6;
 }
 
 .workspace {
@@ -317,6 +379,12 @@ button:hover {
   color: var(--accent);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
 .primary,
 .actions button:first-child {
   background: #3f8f78;
@@ -399,6 +467,10 @@ button:hover {
   align-items: start;
 }
 
+.rules-layout {
+  display: block;
+}
+
 .lower {
   grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr);
   margin-top: 16px;
@@ -434,6 +506,68 @@ button:hover {
 .panel > textarea {
   margin-left: 16px;
   margin-right: 16px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--soft-line);
+  border-radius: 28px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.modal-heading,
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--soft-line);
+  border-bottom: 0;
+}
+
+.modal-body {
+  overflow: auto;
+  padding: 24px 28px 10px;
+}
+
+.modal-close {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  color: var(--muted);
+  background: transparent;
+  font-size: 34px;
+  line-height: 1;
 }
 
 .panel > label:first-of-type {
@@ -540,6 +674,27 @@ label {
 
 .rules {
   display: grid;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--soft-line);
+}
+
+.pagination span {
+  min-width: 56px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.pagination button {
+  padding: 7px 14px;
+  font-size: 13px;
 }
 
 .empty {
@@ -799,16 +954,20 @@ label {
 
 @media (max-width: 980px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: 214px minmax(0, 1fr);
+  }
+
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: 82px minmax(0, 1fr);
   }
 
   .sidebar {
-    position: static;
-    height: auto;
+    position: sticky;
+    height: 100vh;
     gap: 12px;
-    padding: 14px 18px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+    padding: 18px 8px;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
   }
 
   .brand {
@@ -816,12 +975,11 @@ label {
   }
 
   .nav {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
   }
 
   .logout-link {
-    margin-top: 0;
+    margin-top: auto;
   }
 
   .layout,
@@ -832,6 +990,40 @@ label {
 }
 
 @media (max-width: 720px) {
+  .app-shell {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .app-shell:not(.sidebar-collapsed) {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .app-shell:not(.sidebar-collapsed) .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 35;
+    width: min(78vw, 260px);
+    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
+  }
+
+  .app-shell:not(.sidebar-collapsed) .sidebar-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(0, 0, 0, 0.42);
+  }
+
+  .sidebar-collapsed .brand-mark {
+    width: 26px;
+    height: 26px;
+  }
+
   .workspace {
     width: min(100% - 24px, 1320px);
     padding-top: 14px;
@@ -855,7 +1047,7 @@ label {
   }
 
   .nav {
-    grid-template-columns: 1fr 1fr;
+    display: flex;
   }
 
   .nav a,
@@ -864,5 +1056,25 @@ label {
     min-height: 46px;
     padding: 10px 14px;
     font-size: 14px;
+  }
+
+  .modal {
+    padding: 12px;
+  }
+
+  .modal-card {
+    border-radius: 20px;
+    max-height: calc(100vh - 24px);
+  }
+
+  .modal-heading,
+  .modal-footer,
+  .modal-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .modal-footer {
+    flex-wrap: wrap;
   }
 }
