@@ -6,7 +6,7 @@ services:
     network_mode: host
     environment:
       HOST: "0.0.0.0"
-      PORT: "8765"
+      PORT: "18765"
       REALM_SESSION_SECRET: "${REALM_SESSION_SECRET}"
       REALM_RUNTIME: "docker"
     volumes:
