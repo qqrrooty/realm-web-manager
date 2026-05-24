@@ -41,6 +41,7 @@
           <a class="active" href="#dashboard">仪表盘</a>
           <a href="#rules">转发规则</a>
           <a href="#tasks">定时任务</a>
+          <a href="#config">配置文件</a>
           <a href="#logs">运行日志</a>
         </nav>
       </aside>
@@ -91,9 +92,28 @@
               <input id="remark" placeholder="例如：香港入口到落地机 443">
             </label>
             <label>
-              本地监听 listen
-              <input id="listen" required placeholder="[::]:443">
+              监听模式
+              <select id="listenMode">
+                <option value="ipv6">IPv6 / 双栈 [::]</option>
+                <option value="ipv4">IPv4 0.0.0.0</option>
+                <option value="custom">自定义</option>
+              </select>
             </label>
+            <div id="listenPresetFields" class="two">
+              <label>
+                本地端口
+                <input id="listenPort" inputmode="numeric" placeholder="例如 443">
+              </label>
+              <label>
+                生成监听地址
+                <input id="listenPreview" readonly placeholder="[::]:443">
+              </label>
+            </div>
+            <label id="listenCustomLabel" class="hidden">
+              自定义 listen
+              <input id="listenCustom" placeholder="例如 127.0.0.1:8080 或 [::1]:443">
+            </label>
+            <input id="listen" type="hidden" required>
             <label>
               目标地址 remote
               <input id="remote" required placeholder="1.2.3.4:443">
@@ -122,8 +142,13 @@
           <section class="panel rules-panel">
             <div class="panel-heading">
               <h2>当前规则</h2>
-              <span id="ruleCount" class="badge">0 条</span>
+              <div class="panel-tools">
+                <button type="button" id="exportRulesBtn" class="ghost">导出</button>
+                <button type="button" id="importRulesBtn" class="ghost">导入</button>
+                <span id="ruleCount" class="badge">0 条</span>
+              </div>
             </div>
+            <input id="importRulesFile" class="hidden" type="file" accept="application/json,.json">
             <div id="rulesList" class="rules"></div>
           </section>
         </section>
@@ -146,6 +171,19 @@
             </div>
             <pre id="logsOutput" class="logbox logs-box"></pre>
           </section>
+        </section>
+
+        <section id="config" class="panel config-panel">
+          <div class="panel-heading">
+            <h2>配置文件</h2>
+            <div class="panel-tools">
+              <button type="button" id="refreshConfigBtn" class="ghost">刷新</button>
+              <button type="button" id="exportConfigBtn" class="ghost">导出</button>
+              <button type="button" id="importConfigBtn" class="ghost">导入</button>
+            </div>
+          </div>
+          <input id="importConfigFile" class="hidden" type="file" accept=".toml,text/plain">
+          <pre id="configContent" class="config-view">读取中</pre>
         </section>
       </section>
     </main>

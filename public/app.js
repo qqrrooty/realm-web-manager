@@ -41,28 +41,61 @@ function showApp() {
   $("#appView").classList.remove("hidden");
 }
 
+function parseListen(listen) {
+  const value = String(listen || "").trim();
+  if (value.startsWith("0.0.0.0:")) return { mode: "ipv4", port: value.split(":").pop(), custom: "" };
+  if (value.startsWith("[::]:")) return { mode: "ipv6", port: value.split(":").pop(), custom: "" };
+  const portMatch = value.match(/:(\d+)$/);
+  return { mode: "custom", port: portMatch ? portMatch[1] : "", custom: value };
+}
+
+function updateListenFields() {
+  const mode = $("#listenMode").value;
+  const port = $("#listenPort").value.trim();
+  const customMode = mode === "custom";
+  $("#listenPresetFields").classList.toggle("hidden", customMode);
+  $("#listenCustomLabel").classList.toggle("hidden", !customMode);
+
+  let listen = "";
+  if (customMode) {
+    listen = $("#listenCustom").value.trim();
+  } else if (port) {
+    listen = mode === "ipv4" ? `0.0.0.0:${port}` : `[::]:${port}`;
+  }
+  $("#listen").value = listen;
+  $("#listenPreview").value = listen;
+}
+
 function resetForm() {
   $("#ruleId").value = "";
   $("#formTitle").textContent = "添加转发规则";
   $("#remark").value = "";
-  $("#listen").value = "";
+  $("#listenMode").value = "ipv6";
+  $("#listenPort").value = "";
+  $("#listenCustom").value = "";
   $("#remote").value = "";
   $("#extraRemotes").value = "";
   $("#balance").value = "";
   $("#through").value = "";
   $("#interfaceName").value = "";
+  updateListenFields();
 }
 
 function fillForm(rule) {
   $("#ruleId").value = rule.id;
   $("#formTitle").textContent = `编辑规则 #${rule.id}`;
   $("#remark").value = rule.remark || "";
+  const parsedListen = parseListen(rule.listen || "");
+  $("#listenMode").value = parsedListen.mode;
+  $("#listenPort").value = parsedListen.port;
+  $("#listenCustom").value = parsedListen.custom;
   $("#listen").value = rule.listen || "";
   $("#remote").value = rule.remote || "";
   $("#extraRemotes").value = (rule.extraRemotes || []).join("\n");
   $("#balance").value = rule.balance || "";
   $("#through").value = rule.through || "";
   $("#interfaceName").value = rule.interface || "";
+  updateListenFields();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -116,6 +149,7 @@ async function checkSession() {
   if (data.authenticated) {
     showApp();
     await loadStatus();
+    await loadConfig();
   } else {
     showLogin();
   }
@@ -134,8 +168,14 @@ async function loadStatus() {
   renderRules();
 }
 
+async function loadConfig() {
+  const data = await api("/api/config");
+  $("#configContent").textContent = data.content || "";
+}
+
 async function saveRule(event) {
   event.preventDefault();
+  updateListenFields();
   const id = $("#ruleId").value;
   const body = {
     remark: $("#remark").value,
@@ -153,6 +193,7 @@ async function saveRule(event) {
   toast("规则已保存，Realm 已尝试重启", "ok");
   resetForm();
   await loadStatus();
+  await loadConfig();
 }
 
 async function deleteRule(id) {
@@ -160,6 +201,7 @@ async function deleteRule(id) {
   await api(`/api/endpoints/${id}`, { method: "DELETE" });
   toast("规则已删除", "ok");
   await loadStatus();
+  await loadConfig();
 }
 
 async function serviceAction(action) {
@@ -171,6 +213,66 @@ async function serviceAction(action) {
     toast(`服务已${action === "start" ? "启动" : action === "stop" ? "停止" : "重启"}`, "ok");
   }
   await loadStatus();
+}
+
+async function exportRules() {
+  const data = await api("/api/endpoints/export");
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `realm-rules-backup-${date}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  toast("规则备份已导出", "ok");
+}
+
+async function exportConfig() {
+  const data = await api("/api/config");
+  const blob = new Blob([data.content || ""], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `realm-config-${date}.toml`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  toast("配置文件已导出", "ok");
+}
+
+async function importConfig(file) {
+  if (!file) return;
+  const content = await file.text();
+  if (!content.trim()) throw new Error("配置文件为空");
+  if (!confirm("确认导入完整配置文件？当前 config.toml 会被覆盖。")) return;
+  await api("/api/config", { method: "PUT", body: { content } });
+  toast("配置文件已导入", "ok");
+  await loadStatus();
+  await loadConfig();
+}
+
+async function importRules(file) {
+  if (!file) return;
+  const text = await file.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("备份文件不是有效 JSON");
+  }
+  const count = Array.isArray(data.endpoints) ? data.endpoints.length : 0;
+  if (!count) throw new Error("备份文件里没有规则");
+  if (!confirm(`确认导入 ${count} 条规则？当前规则会被覆盖。`)) return;
+  await api("/api/endpoints/import", { method: "POST", body: data });
+  toast(`已导入 ${count} 条规则`, "ok");
+  resetForm();
+  await loadStatus();
+  await loadConfig();
 }
 
 function bindEvents() {
@@ -193,6 +295,7 @@ function bindEvents() {
       $("#confirmPasswordInput").value = "";
       showApp();
       await loadStatus();
+      await loadConfig();
       toast(creating ? "账号已创建" : "登录成功", "ok");
     } catch (error) {
       toast(error.message, "error");
@@ -202,8 +305,41 @@ function bindEvents() {
     await api("/api/logout", { method: "POST" }).catch(() => {});
     showLogin();
   });
-  $("#refreshBtn").addEventListener("click", () => loadStatus().catch((error) => toast(error.message, "error")));
+  $("#refreshBtn").addEventListener("click", async () => {
+    try {
+      await loadStatus();
+      await loadConfig();
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  });
+  $("#refreshConfigBtn").addEventListener("click", () => loadConfig().catch((error) => toast(error.message, "error")));
   $("#resetFormBtn").addEventListener("click", resetForm);
+  $("#listenMode").addEventListener("change", updateListenFields);
+  $("#listenPort").addEventListener("input", updateListenFields);
+  $("#listenCustom").addEventListener("input", updateListenFields);
+  $("#exportRulesBtn").addEventListener("click", () => exportRules().catch((error) => toast(error.message, "error")));
+  $("#importRulesBtn").addEventListener("click", () => $("#importRulesFile").click());
+  $("#importRulesFile").addEventListener("change", async (event) => {
+    try {
+      await importRules(event.target.files[0]);
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      event.target.value = "";
+    }
+  });
+  $("#exportConfigBtn").addEventListener("click", () => exportConfig().catch((error) => toast(error.message, "error")));
+  $("#importConfigBtn").addEventListener("click", () => $("#importConfigFile").click());
+  $("#importConfigFile").addEventListener("change", async (event) => {
+    try {
+      await importConfig(event.target.files[0]);
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      event.target.value = "";
+    }
+  });
   $("#ruleForm").addEventListener("submit", (event) => saveRule(event).catch((error) => toast(error.message, "error")));
   document.querySelector(".actions").addEventListener("click", (event) => {
     const action = event.target.dataset.action;
@@ -240,4 +376,5 @@ function bindEvents() {
 }
 
 bindEvents();
+updateListenFields();
 checkSession().catch((error) => toast(error.message, "error"));

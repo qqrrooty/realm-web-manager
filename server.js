@@ -626,6 +626,28 @@ async function handleApi(req, res, pathname) {
       return sendJson(res, 200, { ok: true });
     }
 
+    if (req.method === "GET" && pathname === "/api/endpoints/export") {
+      const parsed = await readConfig();
+      return sendJson(res, 200, {
+        ok: true,
+        exportedAt: new Date().toISOString(),
+        version: VERSION,
+        endpoints: parsed.endpoints.map(({ id, raw, ...endpoint }) => endpoint)
+      });
+    }
+
+    if (req.method === "POST" && pathname === "/api/endpoints/import") {
+      const body = await readBody(req);
+      const endpoints = Array.isArray(body.endpoints) ? body.endpoints : [];
+      if (!endpoints.length) throw new Error("备份文件里没有可导入的规则");
+      const parsed = await readConfig();
+      parsed.endpoints = endpoints.map(validateEndpoint);
+      await writeConfig(parsed);
+      await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
+      await log(`导入规则备份，共 ${parsed.endpoints.length} 条`);
+      return sendJson(res, 200, { ok: true, count: parsed.endpoints.length });
+    }
+
     const endpointMatch = pathname.match(/^\/api\/endpoints\/(\d+)$/);
     if (endpointMatch && req.method === "PUT") {
       const id = Number(endpointMatch[1]);
@@ -655,6 +677,25 @@ async function handleApi(req, res, pathname) {
       if (body.action === "set") await setDailyRestart(body.hour);
       else if (body.action === "clear") await clearRestartCron();
       else throw new Error("未知定时任务操作");
+      return sendJson(res, 200, { ok: true });
+    }
+
+    if (req.method === "GET" && pathname === "/api/config") {
+      await ensureBaseConfig();
+      const content = await fs.readFile(CONFIG_FILE, "utf8");
+      return sendJson(res, 200, { ok: true, configFile: CONFIG_FILE, content });
+    }
+
+    if (req.method === "PUT" && pathname === "/api/config") {
+      const body = await readBody(req);
+      const content = String(body.content || "").trim();
+      if (!content.includes("[network]") && !content.includes("[[endpoints]]")) {
+        throw new Error("配置内容不像有效的 Realm config.toml");
+      }
+      await fs.mkdir(path.dirname(CONFIG_FILE), { recursive: true });
+      await fs.writeFile(CONFIG_FILE, `${content}\n`, "utf8");
+      await controlService("restart").catch((error) => log(`重启失败: ${error.message}`));
+      await log("导入完整配置文件");
       return sendJson(res, 200, { ok: true });
     }
 

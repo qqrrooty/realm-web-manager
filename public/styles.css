@@ -198,6 +198,11 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
+input[readonly] {
+  background: #f8fafc;
+  color: #475569;
+}
+
 textarea {
   resize: vertical;
 }
@@ -313,6 +318,19 @@ button:hover {
   font-weight: 700;
 }
 
+.panel-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.panel-tools button {
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
 label {
   display: grid;
   gap: 7px;
@@ -426,6 +444,25 @@ label {
 .logs-box {
   height: 220px;
   max-height: 220px;
+}
+
+.config-panel {
+  margin-top: 16px;
+}
+
+.config-view {
+  width: 100%;
+  height: 320px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre;
 }
 
 .toast {
