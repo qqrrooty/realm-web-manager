@@ -15,6 +15,22 @@
   --shadow: 0 8px 22px rgba(31, 35, 41, 0.06);
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101418;
+  --panel: #1b2026;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --line: #2b333d;
+  --soft-line: #2f3844;
+  --accent: #3f8f78;
+  --accent-dark: #337a66;
+  --danger: #ff7875;
+  --ok: #73d13d;
+  --warn: #ffc53d;
+  --shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -28,6 +44,10 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
+}
+
+:root[data-theme="dark"] body {
+  background: var(--bg);
 }
 
 .hidden {
@@ -44,6 +64,12 @@ body {
     linear-gradient(135deg, #5865f2 0%, #7c3aed 45%, #1890ff 100%);
 }
 
+:root[data-theme="dark"] .login-view {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(63, 143, 120, 0.28), transparent 24%),
+    linear-gradient(135deg, #101418 0%, #18212a 48%, #10261f 100%);
+}
+
 .login-panel {
   width: min(420px, 100%);
   background: rgba(255, 255, 255, 0.96);
@@ -54,6 +80,15 @@ body {
   gap: 14px;
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
   backdrop-filter: blur(10px);
+}
+
+:root[data-theme="dark"] .login-panel,
+:root[data-theme="dark"] .sidebar,
+:root[data-theme="dark"] .metric,
+:root[data-theme="dark"] .panel,
+:root[data-theme="dark"] .actions {
+  background: var(--panel);
+  border-color: var(--soft-line);
 }
 
 .login-panel h1 {
@@ -71,7 +106,7 @@ body {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 286px minmax(0, 1fr);
+  grid-template-columns: 214px minmax(0, 1fr);
 }
 
 .sidebar {
@@ -81,8 +116,8 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 28px 16px;
+  gap: 18px;
+  padding: 26px 8px;
   background: #ffffff;
   border-right: 1px solid var(--line);
   box-shadow: 6px 0 18px rgba(31, 35, 41, 0.04);
@@ -93,12 +128,12 @@ body {
   align-items: center;
   gap: 11px;
   min-width: 0;
-  padding: 0 12px 8px;
+  padding: 0 26px 8px;
 }
 
 .brand-mark {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 12px;
@@ -115,26 +150,31 @@ body {
 .brand span {
   margin-top: 1px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+}
+
+.brand strong {
+  font-size: 14px;
 }
 
 .nav {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .nav a,
-.logout-link {
+.logout-link,
+.theme-link {
   display: flex;
   align-items: center;
-  min-height: 54px;
+  min-height: 44px;
   color: #4b5563;
   text-decoration: none;
-  padding: 12px 22px;
-  border-radius: 14px;
-  font-size: 20px;
+  padding: 9px 26px;
+  border-radius: 8px;
+  font-size: 16px;
   border: 0;
   box-shadow: none;
   white-space: nowrap;
@@ -143,16 +183,21 @@ body {
 
 .nav a:hover,
 .nav a.active,
-.logout-link:hover {
+.logout-link:hover,
+.theme-link:hover {
   color: #ffffff;
   background: #2f705f;
 }
 
-.logout-link {
+.logout-link,
+.theme-link {
   width: 100%;
-  margin-top: auto;
   cursor: pointer;
   text-align: left;
+}
+
+.logout-link {
+  margin-top: auto;
 }
 
 .workspace {
@@ -220,6 +265,20 @@ select {
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] button {
+  background: #232a32;
+  border-color: #3a4552;
+  color: var(--text);
+}
+
+:root[data-theme="dark"] input[readonly] {
+  background: #1f252c;
+  color: #aeb7c2;
+}
+
 input:focus,
 textarea:focus,
 select:focus {
@@ -269,6 +328,10 @@ button:hover {
 
 .ghost {
   background: #fff;
+}
+
+:root[data-theme="dark"] .ghost {
+  background: #232a32;
 }
 
 .actions button {
@@ -354,6 +417,10 @@ button:hover {
   background: #fff;
 }
 
+:root[data-theme="dark"] .panel-heading {
+  background: var(--panel);
+}
+
 .panel > label,
 .panel > .two,
 .panel > button.primary,
@@ -380,6 +447,11 @@ button:hover {
   color: var(--accent);
   font-size: 13px;
   font-weight: 650;
+}
+
+:root[data-theme="dark"] .badge {
+  background: rgba(63, 143, 120, 0.18);
+  color: #7bd6bb;
 }
 
 .panel-tools {
@@ -424,6 +496,10 @@ label {
   text-align: center;
 }
 
+:root[data-theme="dark"] .empty {
+  border-color: #3a4552;
+}
+
 .rule {
   border-bottom: 1px solid var(--soft-line);
   padding: 14px 16px;
@@ -434,6 +510,12 @@ label {
 
 .rule:nth-child(even) {
   background: #fcfcfd;
+}
+
+:root[data-theme="dark"] .rule,
+:root[data-theme="dark"] .rule:nth-child(even) {
+  background: var(--panel);
+  border-color: var(--soft-line);
 }
 
 .rule:last-child {
@@ -499,6 +581,38 @@ label {
   font-size: 13px;
 }
 
+.rule-check .switch {
+  position: relative;
+  width: 58px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #d9d9d9;
+  box-shadow: none;
+}
+
+.rule-check .switch::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.18s ease;
+}
+
+.rule-check .switch.on {
+  background: #3f8f78;
+}
+
+.rule-check .switch.on::after {
+  transform: translateX(24px);
+}
+
 .rule-actions button:last-child {
   color: var(--danger);
 }
@@ -519,6 +633,10 @@ label {
   color: #334155;
 }
 
+:root[data-theme="dark"] .pair code {
+  color: #d1d5db;
+}
+
 .logbox {
   width: calc(100% - 32px);
   min-height: 132px;
@@ -534,6 +652,11 @@ label {
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+:root[data-theme="dark"] .logbox {
+  background: #0c1117;
+  color: #cbd5e1;
 }
 
 .cron-panel,
@@ -576,18 +699,26 @@ label {
   white-space: pre;
 }
 
+:root[data-theme="dark"] .config-view {
+  background: #111820;
+  border-color: #3a4552;
+  color: #d1d5db;
+}
+
 .toast {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 50;
   display: none;
   max-width: min(420px, calc(100vw - 36px));
-  padding: 12px 14px;
+  padding: 11px 16px;
   border-radius: 12px;
   color: #fff;
   background: rgba(31, 41, 55, 0.95);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  text-align: center;
 }
 
 .toast.show {
@@ -668,7 +799,8 @@ label {
   }
 
   .nav a,
-  .logout-link {
+  .logout-link,
+  .theme-link {
     min-height: 46px;
     padding: 10px 14px;
     font-size: 15px;

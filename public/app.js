@@ -5,6 +5,8 @@ const state = {
 };
 
 const $ = (selector) => document.querySelector(selector);
+const savedTheme = localStorage.getItem("realmTheme") || "light";
+document.documentElement.dataset.theme = savedTheme;
 
 function toast(message, type = "info") {
   const el = $("#toast");
@@ -40,6 +42,12 @@ function showLogin() {
 function showApp() {
   $("#loginView").classList.add("hidden");
   $("#appView").classList.remove("hidden");
+}
+
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("realmTheme", theme);
+  if ($("#themeToggleBtn")) $("#themeToggleBtn").textContent = theme === "dark" ? "浅色" : "暗色";
 }
 
 function parseListen(listen) {
@@ -138,11 +146,11 @@ function renderRules() {
         <div class="rule-head">
           <label class="rule-check">
             <input type="checkbox" data-select-rule="${rule.id}" ${state.selectedRuleIds.has(rule.id) ? "checked" : ""}>
+            <button class="switch ${rule.enabled === false ? "" : "on"}" data-toggle="${rule.id}" data-enabled="${rule.enabled === false ? "true" : "false"}" aria-label="${rule.enabled === false ? "启动规则" : "关闭规则"}" type="button"></button>
             <span class="rule-title">#${rule.id} ${escapeHtml(rule.remark || "未命名规则")}</span>
             <span class="status-pill ${rule.enabled === false ? "off" : "on"}">${rule.enabled === false ? "已关闭" : "运行中"}</span>
           </label>
           <div class="rule-actions">
-            <button data-toggle="${rule.id}" data-enabled="${rule.enabled === false ? "true" : "false"}">${rule.enabled === false ? "启动" : "关闭"}</button>
             <button data-edit="${rule.id}">编辑</button>
             <button data-delete="${rule.id}">删除</button>
           </div>
@@ -346,6 +354,7 @@ async function importRules(file) {
 }
 
 function bindEvents() {
+  setTheme(savedTheme);
   $("#loginForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -374,6 +383,9 @@ function bindEvents() {
   $("#logoutBtn").addEventListener("click", async () => {
     await api("/api/logout", { method: "POST" }).catch(() => {});
     showLogin();
+  });
+  $("#themeToggleBtn").addEventListener("click", () => {
+    setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   });
   $("#refreshBtn").addEventListener("click", async () => {
     try {
@@ -430,6 +442,8 @@ function bindEvents() {
     const deleteId = event.target.dataset.delete;
     const toggleId = event.target.dataset.toggle;
     if (toggleId) {
+      event.preventDefault();
+      event.stopPropagation();
       toggleRule(toggleId, event.target.dataset.enabled === "true").catch((error) => toast(error.message, "error"));
       return;
     }
