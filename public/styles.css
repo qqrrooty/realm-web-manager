@@ -11,7 +11,7 @@
   --danger: #ff4d4f;
   --ok: #52c41a;
   --warn: #faad14;
-  --radius: 10px;
+  --radius: 14px;
   --shadow: 0 8px 22px rgba(31, 35, 41, 0.06);
 }
 
@@ -99,7 +99,7 @@ body {
   height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 12px;
   color: #fff;
   background: linear-gradient(135deg, #1677ff, #722ed1);
   font-weight: 800;
@@ -195,7 +195,7 @@ textarea,
 select {
   width: 100%;
   border: 1px solid #d9d9d9;
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 9px 11px;
   background: #fff;
   color: var(--text);
@@ -221,7 +221,7 @@ textarea {
 
 button {
   border: 1px solid #d9d9d9;
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 8px 13px;
   background: #fff;
   color: var(--text);
@@ -396,7 +396,7 @@ label {
   margin: 16px;
   padding: 24px;
   border: 1px dashed #d9d9d9;
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--muted);
   text-align: center;
 }
@@ -482,7 +482,7 @@ label {
   overflow: auto;
   margin: 0 16px 16px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #111827;
   color: #d1d5db;
   font-size: 13px;
@@ -523,7 +523,7 @@ label {
   margin: 0 16px 16px;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fafafa;
   color: #1f2937;
   font-size: 13px;
@@ -539,7 +539,7 @@ label {
   display: none;
   max-width: min(420px, calc(100vw - 36px));
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: 12px;
   color: #fff;
   background: rgba(31, 41, 55, 0.95);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);

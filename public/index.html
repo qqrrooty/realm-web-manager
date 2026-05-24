@@ -89,7 +89,7 @@
             <input type="hidden" id="ruleId">
             <label>
               备注
-              <input id="remark" placeholder="例如：香港入口到落地机 443">
+              <input id="remark" placeholder="例如：香港入口到落地机">
             </label>
             <label>
               监听模式
@@ -102,7 +102,7 @@
             <div id="listenPresetFields" class="two">
               <label>
                 本地端口
-                <input id="listenPort" type="number" min="1" max="65535" inputmode="numeric" placeholder="例如 443">
+                <input id="listenPort" type="number" min="1" max="65535" inputmode="numeric" placeholder="1-65535">
               </label>
               <label>
                 生成监听地址
@@ -119,8 +119,8 @@
               <input id="remote" required placeholder="1.2.3.4:443">
             </label>
             <label>
-              备用目标 extra_remotes
-              <textarea id="extraRemotes" rows="3" placeholder="每行一个，例如 5.6.7.8:443"></textarea>
+              备用目标地址 extra_remotes
+              <textarea id="extraRemotes" rows="3" placeholder="每行一个地址，例如 5.6.7.8:443"></textarea>
             </label>
             <label>
               负载策略 balance
