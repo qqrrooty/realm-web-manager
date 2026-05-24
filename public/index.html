@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Realm Web Manager</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <section id="loginView" class="login-view">
+      <form id="loginForm" class="login-panel">
+        <p class="eyebrow">zhboner/realm</p>
+        <h1 id="loginTitle">Realm Web Manager</h1>
+        <p id="loginHint" class="login-hint">登录后进入管理面板</p>
+        <label>
+          用户名
+          <input id="usernameInput" autocomplete="username" placeholder="admin">
+        </label>
+        <label>
+          密码
+          <input id="passwordInput" type="password" autocomplete="current-password" placeholder="请输入面板密码">
+        </label>
+        <label id="confirmPasswordLabel" class="hidden">
+          确认密码
+          <input id="confirmPasswordInput" type="password" autocomplete="new-password" placeholder="再次输入密码">
+        </label>
+        <button id="loginSubmitBtn" class="primary" type="submit">登录</button>
+      </form>
+    </section>
+
+    <main id="appView" class="shell hidden">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">zhboner/realm</p>
+          <h1>Realm 转发管理</h1>
+        </div>
+        <button id="logoutBtn">退出登录</button>
+      </section>
+
+      <section class="status-grid">
+        <article class="metric">
+          <span>服务状态</span>
+          <strong id="serviceState">读取中</strong>
+        </article>
+        <article class="metric">
+          <span>安装状态</span>
+          <strong id="installState">读取中</strong>
+        </article>
+        <article class="metric">
+          <span>配置文件</span>
+          <strong id="configPath">-</strong>
+        </article>
+      </section>
+
+      <section class="actions">
+        <button data-action="install">安装/更新 Realm</button>
+        <button data-action="start">启动</button>
+        <button data-action="stop">停止</button>
+        <button data-action="restart">重启</button>
+        <button id="refreshBtn">刷新</button>
+      </section>
+
+      <section class="layout">
+        <form id="ruleForm" class="panel">
+          <div class="panel-heading">
+            <h2 id="formTitle">添加转发规则</h2>
+            <button type="button" id="resetFormBtn" class="ghost">清空</button>
+          </div>
+          <input type="hidden" id="ruleId">
+          <label>
+            备注
+            <input id="remark" placeholder="例如：香港入口到落地机 443">
+          </label>
+          <label>
+            本地监听 listen
+            <input id="listen" required placeholder="[::]:443">
+          </label>
+          <label>
+            目标地址 remote
+            <input id="remote" required placeholder="1.2.3.4:443">
+          </label>
+          <label>
+            备用目标 extra_remotes
+            <textarea id="extraRemotes" rows="3" placeholder="每行一个，例如 5.6.7.8:443"></textarea>
+          </label>
+          <div class="two">
+            <label>
+              负载策略 balance
+              <input id="balance" placeholder="可选，例如 roundrobin: 4, 2, 1">
+            </label>
+            <label>
+              出口 through
+              <input id="through" placeholder="可选，本机出口 IP">
+            </label>
+          </div>
+          <label>
+            网卡 interface
+            <input id="interfaceName" placeholder="可选，例如 eth0">
+          </label>
+          <button class="primary" type="submit">保存规则</button>
+        </form>
+
+        <section class="panel rules-panel">
+          <div class="panel-heading">
+            <h2>当前规则</h2>
+            <span id="ruleCount">0 条</span>
+          </div>
+          <div id="rules" class="rules"></div>
+        </section>
+      </section>
+
+      <section class="layout lower">
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>定时重启</h2>
+          </div>
+          <div class="cron-row">
+            <input id="cronHour" type="number" min="0" max="23" placeholder="小时 0-23">
+            <button id="setCronBtn">设置每日重启</button>
+            <button id="clearCronBtn" class="ghost">清除</button>
+          </div>
+          <pre id="cronList" class="logbox"></pre>
+        </section>
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>日志</h2>
+          </div>
+          <pre id="logs" class="logbox"></pre>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
