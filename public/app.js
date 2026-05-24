@@ -11,7 +11,7 @@ document.documentElement.dataset.theme = savedTheme;
 function toast(message, type = "info") {
   const el = $("#toast");
   el.textContent = message;
-  el.style.background = type === "error" ? "#c62828" : type === "ok" ? "#2e7d32" : "#263238";
+  el.style.background = type === "error" ? "#d94d45" : type === "ok" ? "#3f8f78" : "#3f8f78";
   el.classList.add("show");
   clearTimeout(window.toastTimer);
   window.toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
@@ -48,6 +48,11 @@ function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   localStorage.setItem("realmTheme", theme);
   if ($("#themeToggleBtn")) $("#themeToggleBtn").textContent = theme === "dark" ? "浅色" : "暗色";
+}
+
+function setAdvancedOptions(open) {
+  $("#advancedOptions").classList.toggle("hidden", !open);
+  $("#advancedToggleBtn").textContent = open ? "收起高级选项" : "高级选项";
 }
 
 function parseListen(listen) {
@@ -111,6 +116,7 @@ function resetForm() {
   $("#balance").value = "";
   $("#through").value = "";
   $("#interfaceName").value = "";
+  setAdvancedOptions(false);
   updateListenFields();
 }
 
@@ -128,6 +134,7 @@ function fillForm(rule) {
   $("#balance").value = rule.balance || "";
   $("#through").value = rule.through || "";
   $("#interfaceName").value = rule.interface || "";
+  setAdvancedOptions(Boolean((rule.extraRemotes || []).length || rule.balance || rule.through || rule.interface));
   updateListenFields();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -400,6 +407,9 @@ function bindEvents() {
   $("#listenMode").addEventListener("change", updateListenFields);
   $("#listenPort").addEventListener("input", updateListenFields);
   $("#listenCustom").addEventListener("input", updateListenFields);
+  $("#advancedToggleBtn").addEventListener("click", () => {
+    setAdvancedOptions($("#advancedOptions").classList.contains("hidden"));
+  });
   $("#exportRulesBtn").addEventListener("click", () => exportRules().catch((error) => toast(error.message, "error")));
   $("#importRulesBtn").addEventListener("click", () => $("#importRulesFile").click());
   $("#selectAllRulesBtn").addEventListener("click", toggleSelectAllRules);

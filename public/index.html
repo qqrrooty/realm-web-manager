@@ -119,22 +119,25 @@
               目标地址 remote
               <input id="remote" required placeholder="1.2.3.4:443">
             </label>
-            <label>
-              备用目标地址 extra_remotes
-              <textarea id="extraRemotes" rows="3" placeholder="每行一个地址，例如 5.6.7.8:443"></textarea>
-            </label>
-            <label>
-              负载策略 balance
-              <input id="balance" placeholder="可选，例如 roundrobin: 4, 2, 1">
-            </label>
-            <label>
-              出口 through
-              <input id="through" placeholder="可选，本机出口 IP">
-            </label>
-            <label>
-              网卡 interface
-              <input id="interfaceName" placeholder="可选，例如 eth0">
-            </label>
+            <button id="advancedToggleBtn" type="button" class="advanced-toggle">高级选项</button>
+            <section id="advancedOptions" class="advanced-options hidden">
+              <label>
+                备用目标地址 extra_remotes
+                <textarea id="extraRemotes" rows="3" placeholder="每行一个地址，例如 5.6.7.8:443"></textarea>
+              </label>
+              <label>
+                负载策略 balance
+                <input id="balance" placeholder="可选，例如 roundrobin: 4, 2, 1">
+              </label>
+              <label>
+                出口 through
+                <input id="through" placeholder="可选，本机出口 IP">
+              </label>
+              <label>
+                网卡 interface
+                <input id="interfaceName" placeholder="可选，例如 eth0">
+              </label>
+            </section>
             <button class="primary" type="submit">保存规则</button>
           </form>
 

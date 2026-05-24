@@ -428,6 +428,8 @@ button:hover {
 
 .panel > label,
 .panel > .two,
+.panel > .advanced-toggle,
+.panel > .advanced-options,
 .panel > button.primary,
 .panel > textarea {
   margin-left: 16px;
@@ -440,6 +442,24 @@ button:hover {
 
 .panel > button.primary {
   margin-bottom: 16px;
+}
+
+.advanced-toggle {
+  margin-bottom: 13px;
+  background: #f8fafc;
+}
+
+.advanced-options {
+  padding: 12px 12px 0;
+  margin-bottom: 13px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+:root[data-theme="dark"] .advanced-options {
+  background: #171d24;
+  border-color: #3a4552;
 }
 
 .badge {
@@ -750,13 +770,15 @@ label {
   transform: translateX(-50%);
   z-index: 50;
   display: none;
-  max-width: min(420px, calc(100vw - 36px));
-  padding: 11px 16px;
-  border-radius: 12px;
+  max-width: min(460px, calc(100vw - 36px));
+  min-height: 42px;
+  padding: 10px 22px;
+  border-radius: 999px;
   color: #fff;
-  background: rgba(31, 41, 55, 0.95);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  background: #3f8f78;
+  box-shadow: 0 6px 16px rgba(33, 95, 80, 0.24);
   text-align: center;
+  line-height: 22px;
 }
 
 .toast.show {
