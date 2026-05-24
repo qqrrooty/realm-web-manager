@@ -67,7 +67,7 @@ function fillForm(rule) {
 }
 
 function renderRules() {
-  const box = $("#rules");
+  const box = $("#rulesList");
   $("#ruleCount").textContent = `${state.endpoints.length} 条`;
   if (!state.endpoints.length) {
     box.innerHTML = '<p class="empty">还没有转发规则。</p>';
@@ -129,7 +129,7 @@ async function loadStatus() {
   setStateText($("#serviceState"), active, active === "active" ? "state-ok" : "state-bad");
   setStateText($("#installState"), installed ? "已安装" : "未安装", installed ? "state-ok" : "state-warn");
   $("#configPath").textContent = data.configFile || "-";
-  $("#logs").textContent = (data.logs || []).join("\n") || "暂无日志";
+  $("#logsOutput").textContent = (data.logs || []).join("\n") || "暂无日志";
   $("#cronList").textContent = (data.cronJobs || []).join("\n") || "暂无定时重启任务";
   renderRules();
 }
@@ -210,7 +210,7 @@ function bindEvents() {
     if (!action) return;
     serviceAction(action).catch((error) => toast(error.message, "error"));
   });
-  $("#rules").addEventListener("click", (event) => {
+  $("#rulesList").addEventListener("click", (event) => {
     const editId = event.target.dataset.edit;
     const deleteId = event.target.dataset.delete;
     if (editId) {
