@@ -403,8 +403,22 @@ button:disabled {
   box-shadow: 0 6px 12px rgba(33, 95, 80, 0.24);
 }
 
+:root[data-theme="dark"] button.primary,
+:root[data-theme="dark"] .primary {
+  background: #3f8f78;
+  border-color: #3f8f78;
+  color: #fff;
+}
+
 .primary:hover {
   background: #337a66;
+  color: #fff;
+}
+
+:root[data-theme="dark"] button.primary:hover,
+:root[data-theme="dark"] .primary:hover {
+  background: #337a66;
+  border-color: #337a66;
   color: #fff;
 }
 
@@ -1069,6 +1083,20 @@ label {
     align-items: stretch;
   }
 
+  .actions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .actions button {
+    flex: 0 0 auto;
+  }
+
   .panel-heading {
     align-items: stretch;
     flex-direction: column;
@@ -1116,14 +1144,17 @@ label {
   }
 
   .rule-head {
-    align-items: flex-start;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
   }
 
   .rule-check {
-    width: 100%;
+    width: auto;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 7px;
   }
 
   .rule-title {
@@ -1131,14 +1162,20 @@ label {
   }
 
   .status-pill {
-    min-height: 28px;
-    padding: 4px 12px;
+    min-height: 26px;
+    padding: 3px 10px;
   }
 
   .rule-actions {
-    width: 100%;
+    width: auto;
     justify-content: flex-end;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .rule-actions button {
+    padding: 5px 10px;
+    font-size: 13px;
   }
 
   .pair {
