@@ -443,7 +443,7 @@ button:disabled {
 
 .status-grid {
   display: grid;
-  grid-template-columns: 0.75fr 0.75fr 1.5fr;
+  grid-template-columns: 0.75fr 0.95fr 1.5fr;
   gap: 14px;
   margin-bottom: 14px;
 }

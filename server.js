@@ -371,6 +371,47 @@ function quoteShell(value) {
   return `'${String(value).replace(/'/g, "'\\''")}'`;
 }
 
+function normalizeVersion(value) {
+  const match = String(value || "").match(/v?(\d+(?:\.\d+){1,3})/i);
+  return match ? match[1] : "";
+}
+
+function compareVersions(left, right) {
+  const a = normalizeVersion(left).split(".").map(Number);
+  const b = normalizeVersion(right).split(".").map(Number);
+  const length = Math.max(a.length, b.length);
+  for (let i = 0; i < length; i += 1) {
+    const diff = (a[i] || 0) - (b[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+async function latestRealmVersion() {
+  const result = await runShell("curl -fsSL https://api.github.com/repos/zhboner/realm/releases/latest 2>/dev/null");
+  if (!result.ok) throw new Error(result.stderr || result.message || "检查更新失败");
+  try {
+    const data = JSON.parse(result.stdout);
+    return normalizeVersion(data.tag_name);
+  } catch {
+    throw new Error("无法解析最新版本信息");
+  }
+}
+
+async function checkRealmUpdate() {
+  const status = await serviceStatus();
+  if (!status.installed) throw new Error("Realm 未安装");
+  const current = normalizeVersion(status.realmVersion);
+  if (!current) throw new Error("无法读取当前 Realm 版本");
+  const latest = await latestRealmVersion();
+  if (!latest) throw new Error("无法读取最新 Realm 版本");
+  return {
+    current,
+    latest,
+    hasUpdate: compareVersions(latest, current) > 0
+  };
+}
+
 async function installRealm() {
   await fs.mkdir(REALM_DIR, { recursive: true });
   const script = [
@@ -648,6 +689,11 @@ async function handleApi(req, res, pathname) {
       const result = await installRealm();
       if (RUNTIME === "docker") await controlService("restart");
       return sendJson(res, 200, { ok: true, output: result.stdout || result.stderr });
+    }
+
+    if (req.method === "GET" && pathname === "/api/update-check") {
+      const result = await checkRealmUpdate();
+      return sendJson(res, 200, { ok: true, ...result });
     }
 
     if (req.method === "POST" && pathname === "/api/service") {

@@ -247,8 +247,9 @@ async function loadStatus() {
   state.selectedRuleIds = new Set([...state.selectedRuleIds].filter((id) => state.endpoints.some((item) => item.id === id)));
   const active = data.status?.active || "unknown";
   const installed = Boolean(data.status?.installed);
+  const realmVersion = data.status?.realmVersion || "未知版本";
   setStateText($("#serviceState"), serviceStateText(active), active === "active" ? "state-ok" : "state-bad");
-  setStateText($("#installState"), installed ? "已安装" : "未安装", installed ? "state-ok" : "state-warn");
+  setStateText($("#installState"), installed ? `已安装 / ${realmVersion}` : "未安装", installed ? "state-ok" : "state-warn");
   $("#configPath").textContent = data.configFile || "-";
   $("#logsOutput").textContent = (data.logs || []).join("\n") || "暂无日志";
   $("#cronList").textContent = (data.cronJobs || []).join("\n") || "暂无定时重启任务";
@@ -344,6 +345,9 @@ async function serviceAction(action) {
   if (action === "install") {
     await api("/api/install", { method: "POST" });
     toast("安装/更新完成", "ok");
+  } else if (action === "checkUpdate") {
+    const data = await api("/api/update-check");
+    toast(data.hasUpdate ? `发现新版本 ${data.latest}，当前 ${data.current}` : `已是最新版本 ${data.current}`, data.hasUpdate ? "info" : "ok");
   } else {
     await api("/api/service", { method: "POST", body: { action } });
     toast(`服务已${action === "start" ? "启动" : action === "stop" ? "停止" : "重启"}`, "ok");
