@@ -245,10 +245,6 @@ body {
   text-align: left;
 }
 
-.logout-link {
-  margin-top: auto;
-}
-
 .sidebar-toggle {
   width: 44px;
   height: 44px;
@@ -991,10 +987,6 @@ label {
 
   .nav {
     display: flex;
-  }
-
-  .logout-link {
-    margin-top: auto;
   }
 
   .layout,

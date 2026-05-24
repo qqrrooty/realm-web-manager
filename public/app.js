@@ -216,6 +216,18 @@ function setStateText(el, text, className) {
   el.className = className || "";
 }
 
+function serviceStateText(value) {
+  const stateText = {
+    active: "运行中",
+    inactive: "未运行",
+    failed: "运行失败",
+    activating: "启动中",
+    deactivating: "停止中",
+    unknown: "未知"
+  };
+  return stateText[value] || value || "未知";
+}
+
 async function checkSession() {
   const data = await api("/api/session");
   state.needsSetup = Boolean(data.needsSetup);
@@ -234,7 +246,7 @@ async function loadStatus() {
   state.selectedRuleIds = new Set([...state.selectedRuleIds].filter((id) => state.endpoints.some((item) => item.id === id)));
   const active = data.status?.active || "unknown";
   const installed = Boolean(data.status?.installed);
-  setStateText($("#serviceState"), active, active === "active" ? "state-ok" : "state-bad");
+  setStateText($("#serviceState"), serviceStateText(active), active === "active" ? "state-ok" : "state-bad");
   setStateText($("#installState"), installed ? "已安装" : "未安装", installed ? "state-ok" : "state-warn");
   $("#configPath").textContent = data.configFile || "-";
   $("#logsOutput").textContent = (data.logs || []).join("\n") || "暂无日志";
