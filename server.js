@@ -6,7 +6,7 @@ const path = require("path");
 const { exec, execFile, spawn } = require("child_process");
 
 const VERSION = "1.1.0";
-const PORT = Number(process.env.PORT || 8765);
+const PORT = Number(process.env.PORT || 18765);
 const HOST = process.env.HOST || "0.0.0.0";
 const RUNTIME = process.env.REALM_RUNTIME || (fsSync.existsSync("/.dockerenv") ? "docker" : "systemd");
 const SESSION_SECRET = process.env.REALM_SESSION_SECRET || crypto.randomBytes(32).toString("hex");

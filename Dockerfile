@@ -5,7 +5,7 @@ COPY package.json server.js ./
 COPY public ./public
 
 ENV HOST=0.0.0.0
-ENV PORT=8765
+ENV PORT=18765
 ENV REALM_RUNTIME=docker
 ENV REALM_DIR=/data/realm
 ENV REALM_CONFIG=/data/config.toml
@@ -19,6 +19,6 @@ RUN apt-get update \
   && mkdir -p /data
 
 VOLUME ["/data"]
-EXPOSE 8765
+EXPOSE 18765
 
 CMD ["node", "server.js"]

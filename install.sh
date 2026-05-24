@@ -37,5 +37,5 @@ fi
 sudo docker compose up -d --build
 
 echo "Realm Web Manager 已启动"
-echo "请用 Nginx 反代到 http://127.0.0.1:8765"
+echo "请访问 http://服务器IP:18765"
 echo "首次打开页面时会要求初始化管理员账号"

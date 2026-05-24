@@ -23,7 +23,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/qqrrooty/realm-web-manager/m
 安装完成后，面板会监听：
 
 ```text
-http://127.0.0.1:8765
+http://服务器IP:18765
 ```
 
 首次打开会要求设置管理员用户名和密码。
@@ -42,9 +42,17 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-## Nginx 反代
+## 防火墙
 
-参考 [nginx.realm-web-manager.conf](./nginx.realm-web-manager.conf)：
+如果服务器开启了防火墙，请放行面板端口：
+
+```bash
+ufw allow 18765/tcp
+```
+
+## 可选：Nginx 反代
+
+如果你想用域名访问，可以参考 [nginx.realm-web-manager.conf](./nginx.realm-web-manager.conf)：
 
 ```nginx
 server {
@@ -52,7 +60,7 @@ server {
   server_name realm.example.com;
 
   location / {
-    proxy_pass http://127.0.0.1:8765;
+    proxy_pass http://127.0.0.1:18765;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -62,13 +70,13 @@ server {
 }
 ```
 
-建议使用 HTTPS。
+如果使用反代，也建议配 HTTPS。
 
 ## Docker 说明
 
 `docker-compose.yml` 使用 `network_mode: host`。这样 Realm 配置里的监听端口会直接监听在宿主机上，适合做端口转发管理。
 
-面板自身默认只监听 `127.0.0.1:8765`，建议通过 Nginx / Caddy 暴露到公网。
+面板默认监听 `0.0.0.0:18765`，可以直接用 `http://服务器IP:18765` 访问。
 
 ## 数据位置
 
@@ -84,8 +92,8 @@ Docker 数据卷保存：
 
 - 不要上传 `.env`
 - 不要上传 `/data/users.json`
-- 不要把面板直接裸露到公网
-- 建议使用 HTTPS 反代访问
+- 直接用 IP + 端口访问时，请设置强密码
+- 更高安全要求建议使用 HTTPS 反代访问
 
 ## 发布到 GitHub 前
 
