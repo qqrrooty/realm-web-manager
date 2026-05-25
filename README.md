@@ -43,17 +43,17 @@ realm
 
 `/usr/local/bin/realm` 和 `/usr/local/bin/realm-web-manager` 是命令入口。
 
-进入脚本后，选择 `2. 安装 Realm Web Manager` 来安装面板。
+进入脚本后，选择 `2. 安装Web面板` 来安装 Realm Web Manager。
 
 脚本菜单包含：
 
 ```text
 1. 安装 Docker
-2. 安装 Realm Web Manager
-3. 卸载 Realm Web Manager
-4. 启动面板
-5. 停止面板
-6. 重启面板
+2. 安装Web面板
+3. 卸载Web面板
+4. 启动Web面板
+5. 停止Web面板
+6. 重启Web面板
 7. 修改Web路径
 8. 更新脚本
 9. 仅卸载脚本
