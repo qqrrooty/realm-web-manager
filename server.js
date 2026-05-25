@@ -21,8 +21,6 @@ const CRON_STATE_FILE = process.env.REALM_CRON_STATE || "/data/restart-schedule.
 const USERS_FILE = process.env.REALM_USERS_FILE || "/data/users.json";
 const LOG_FILE = process.env.REALM_WEB_LOG || (RUNTIME === "docker" ? "/data/realm_web_manager.log" : "/var/log/realm_web_manager.log");
 const WEB_PATH_FILE = process.env.REALM_WEB_PATH_FILE || (RUNTIME === "docker" ? "/data/web-path" : path.join(REALM_DIR, "web-path"));
-const MANAGER_REPO_URL = process.env.REALM_WEB_MANAGER_REPO || "https://github.com/qqrrooty/realm-web-manager.git";
-const MANAGER_APP_DIR = process.env.REALM_WEB_MANAGER_DIR || "/opt/realm-web-manager";
 const PUBLIC_DIR = path.join(__dirname, "public");
 const AUTO_START_REALM = process.env.AUTO_START_REALM !== "false";
 
@@ -69,10 +67,6 @@ function randomWebBasePath() {
   return `/${crypto.randomBytes(8).toString("hex")}`;
 }
 
-function randomCustomWebBasePath() {
-  return `/${crypto.randomBytes(8).toString("hex")}`;
-}
-
 function loadOrCreateWebBasePath() {
   let value = "";
   try {
@@ -87,15 +81,6 @@ function loadOrCreateWebBasePath() {
   } catch {
     // The panel can still run with the in-memory path.
   }
-  return normalized;
-}
-
-async function updateWebBasePath(value) {
-  const normalized = normalizeWebBasePath(value);
-  await fs.mkdir(path.dirname(WEB_PATH_FILE), { recursive: true });
-  await fs.writeFile(WEB_PATH_FILE, `${normalized}\n`, "utf8");
-  webBasePath = normalized;
-  await log(`修改面板访问路径: ${normalized}`);
   return normalized;
 }
 
@@ -400,22 +385,6 @@ async function serviceStatus() {
   return RUNTIME === "docker" ? dockerStatus() : systemdStatus();
 }
 
-async function osRelease() {
-  try {
-    const content = await fs.readFile("/etc/os-release", "utf8");
-    const entries = Object.fromEntries(
-      content
-        .split(/\r?\n/)
-        .map((line) => line.match(/^([A-Z_]+)=(.*)$/))
-        .filter(Boolean)
-        .map((match) => [match[1], match[2].replace(/^"|"$/g, "")])
-    );
-    return entries.ID || entries.PRETTY_NAME || process.platform;
-  } catch {
-    return process.platform;
-  }
-}
-
 async function ensureServiceFile() {
   const body = `[Unit]
 Description=Realm Proxy Service
@@ -589,40 +558,6 @@ async function controlService(action) {
   return result;
 }
 
-async function runManagerAction(action) {
-  const installDockerScript = [
-    "set -e",
-    "if command -v docker >/dev/null 2>&1; then docker --version; exit 0; fi",
-    "if ! command -v curl >/dev/null 2>&1; then apt-get update && apt-get install -y curl ca-certificates; fi",
-    "curl -fsSL https://get.docker.com | sh",
-    "docker --version"
-  ].join("\n");
-  const installManagerScript = [
-    "set -e",
-    "if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sh; fi",
-    "COMPOSE='docker compose'",
-    "if ! docker compose version >/dev/null 2>&1; then if command -v docker-compose >/dev/null 2>&1; then COMPOSE='docker-compose'; else echo 'Docker Compose 不可用' >&2; exit 1; fi; fi",
-    "if ! command -v git >/dev/null 2>&1; then apt-get update && apt-get install -y git curl ca-certificates; fi",
-    `mkdir -p ${quoteShell(path.dirname(MANAGER_APP_DIR))}`,
-    `if [ -d ${quoteShell(path.join(MANAGER_APP_DIR, ".git"))} ]; then cd ${quoteShell(MANAGER_APP_DIR)} && git pull; else git clone ${quoteShell(MANAGER_REPO_URL)} ${quoteShell(MANAGER_APP_DIR)} && cd ${quoteShell(MANAGER_APP_DIR)}; fi`,
-    "if [ ! -f .env ]; then SECRET=$(openssl rand -hex 32 2>/dev/null || date +%s%N | sha256sum | awk '{print $1}'); printf 'REALM_SESSION_SECRET=%s\\n' \"$SECRET\" > .env; fi",
-    "$COMPOSE up -d --build"
-  ].join("\n");
-  const commands = {
-    installDocker: installDockerScript,
-    installManager: installManagerScript,
-    uninstallManager: `(sleep 1; docker rm -f realm-web-manager; rm -rf ${quoteShell(MANAGER_APP_DIR)} 2>/dev/null || true) >/tmp/realm-web-manager-action.log 2>&1 & echo '卸载任务已提交'`,
-    startManager: "docker start realm-web-manager",
-    stopManager: "(sleep 1; docker stop realm-web-manager) >/tmp/realm-web-manager-action.log 2>&1 & echo '停止任务已提交'",
-    restartManager: "(sleep 1; docker restart realm-web-manager) >/tmp/realm-web-manager-action.log 2>&1 & echo '重启任务已提交'"
-  };
-  if (!commands[action]) throw new Error("未知管理操作");
-  const result = await runShell(commands[action], { timeout: 600000 });
-  if (!result.ok) throw new Error(result.stderr || result.message || "管理操作失败");
-  await log(`Docker 管理操作: ${action}`);
-  return result;
-}
-
 async function readCronJobs() {
   if (RUNTIME === "docker") {
     try {
@@ -788,18 +723,15 @@ async function handleApi(req, res, pathname) {
     if (!requireAuth(req, res)) return;
 
     if (req.method === "GET" && pathname === "/api/status") {
-      const [status, parsed, cronJobs, logs, release] = await Promise.all([
+      const [status, parsed, cronJobs, logs] = await Promise.all([
         serviceStatus(),
         readConfig(),
         readCronJobs(),
-        fs.readFile(LOG_FILE, "utf8").catch(() => ""),
-        osRelease()
+        fs.readFile(LOG_FILE, "utf8").catch(() => "")
       ]);
       return sendJson(res, 200, {
         ok: true,
         version: VERSION,
-        osRelease: release,
-        webBasePath,
         configFile: CONFIG_FILE,
         status,
         endpoints: parsed.endpoints,
@@ -817,22 +749,6 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && pathname === "/api/update-check") {
       const result = await checkRealmUpdate();
       return sendJson(res, 200, { ok: true, ...result });
-    }
-
-    if (req.method === "GET" && pathname === "/api/web-path") {
-      return sendJson(res, 200, { ok: true, webBasePath });
-    }
-
-    if (req.method === "POST" && pathname === "/api/web-path") {
-      const body = await readBody(req);
-      const nextPath = await updateWebBasePath(body.random ? randomCustomWebBasePath() : body.path);
-      return sendJson(res, 200, { ok: true, webBasePath: nextPath });
-    }
-
-    if (req.method === "POST" && pathname === "/api/manager") {
-      const body = await readBody(req);
-      const result = await runManagerAction(body.action);
-      return sendJson(res, 200, { ok: true, output: result.stdout || result.stderr });
     }
 
     if (req.method === "POST" && pathname === "/api/service") {

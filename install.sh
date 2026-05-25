@@ -2,6 +2,8 @@
 set -euo pipefail
 
 MANAGER_URL="${MANAGER_URL:-https://raw.githubusercontent.com/qqrrooty/realm-web-manager/main/manager.sh}"
+SCRIPT_PATH="${SCRIPT_PATH:-/root/realm}"
+INSTALL_WEB_PATH="${INSTALL_WEB_PATH:-/root/realm-install-web.sh}"
 
 if [ "$(id -u)" -eq 0 ]; then
   SUDO=""
@@ -15,13 +17,18 @@ if ! command -v curl >/dev/null 2>&1; then
 fi
 
 if [ -f manager.sh ]; then
-  $SUDO install -m 755 manager.sh /usr/local/bin/realm
-  $SUDO install -m 755 manager.sh /usr/local/bin/realm-web-manager
+  $SUDO install -m 755 manager.sh "$SCRIPT_PATH"
+  if [ -f install-web.sh ]; then
+    $SUDO install -m 755 install-web.sh "$INSTALL_WEB_PATH"
+  fi
 else
-  curl -fsSL "$MANAGER_URL" | $SUDO tee /usr/local/bin/realm >/dev/null
-  $SUDO chmod +x /usr/local/bin/realm
-  $SUDO cp /usr/local/bin/realm /usr/local/bin/realm-web-manager
+  curl -fsSL "$MANAGER_URL" | $SUDO tee "$SCRIPT_PATH" >/dev/null
+  $SUDO chmod +x "$SCRIPT_PATH"
 fi
 
+$SUDO ln -sf "$SCRIPT_PATH" /usr/local/bin/realm
+$SUDO ln -sf "$SCRIPT_PATH" /usr/local/bin/realm-web-manager
+
 echo "Realm Web Manager 管理脚本已安装"
+echo "脚本路径: $SCRIPT_PATH"
 echo "SSH 输入 realm 打开管理脚本，然后在脚本里安装面板"

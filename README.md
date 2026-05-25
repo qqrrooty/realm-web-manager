@@ -29,6 +29,20 @@ bash <(curl -fsSL https://raw.githubusercontent.com/qqrrooty/realm-web-manager/m
 realm
 ```
 
+管理脚本本体安装在：
+
+```text
+/root/realm
+```
+
+面板安装脚本安装在：
+
+```text
+/root/realm-install-web.sh
+```
+
+`/usr/local/bin/realm` 和 `/usr/local/bin/realm-web-manager` 是命令入口。
+
 进入脚本后，选择 `2. 安装 Realm Web Manager` 来安装面板。
 
 脚本菜单包含：
@@ -139,6 +153,7 @@ Docker 数据卷保存：
 - `Dockerfile`
 - `docker-compose.yml`
 - `install.sh`
+- `install-web.sh`
 - `nginx.realm-web-manager.conf`
 - `manager.sh`
 - `package.json`

@@ -3,6 +3,9 @@ set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/qqrrooty/realm-web-manager.git}"
 MANAGER_URL="${MANAGER_URL:-https://raw.githubusercontent.com/qqrrooty/realm-web-manager/main/manager.sh}"
+INSTALL_WEB_URL="${INSTALL_WEB_URL:-https://raw.githubusercontent.com/qqrrooty/realm-web-manager/main/install-web.sh}"
+SCRIPT_PATH="${SCRIPT_PATH:-/root/realm}"
+INSTALL_WEB_PATH="${INSTALL_WEB_PATH:-/root/realm-install-web.sh}"
 APP_DIR="${APP_DIR:-/opt/realm-web-manager}"
 CONTAINER_NAME="${CONTAINER_NAME:-realm-web-manager}"
 PANEL_PORT="${PANEL_PORT:-18765}"
@@ -66,37 +69,21 @@ install_docker() {
 }
 
 install_manager() {
-  install_docker
-  local compose
-  compose="$(compose_cmd)"
-  if [ -z "$compose" ]; then
-    echo "未找到 Docker Compose，请先安装 Docker Compose"
-    return 1
-  fi
-  if ! command -v git >/dev/null 2>&1; then
-    $SUDO apt-get update
-    $SUDO apt-get install -y git
-  fi
-  $SUDO mkdir -p "$(dirname "$APP_DIR")"
-  if [ -d "$APP_DIR/.git" ]; then
-    cd "$APP_DIR"
-    $SUDO git pull
+  if [ -f install-web.sh ]; then
+    $SUDO install -m 755 install-web.sh "$INSTALL_WEB_PATH"
   else
-    $SUDO git clone "$REPO_URL" "$APP_DIR"
-    cd "$APP_DIR"
+    if ! command -v curl >/dev/null 2>&1; then
+      $SUDO apt-get update
+      $SUDO apt-get install -y curl ca-certificates
+    fi
+    curl -fsSL "${INSTALL_WEB_URL}?t=$(date +%s)" | $SUDO tee "$INSTALL_WEB_PATH" >/dev/null
+    $SUDO chmod +x "$INSTALL_WEB_PATH"
   fi
-  if [ ! -f .env ]; then
-    local secret
-    secret="$(openssl rand -hex 32 2>/dev/null || date +%s%N | sha256sum | awk '{print $1}')"
-    printf 'REALM_SESSION_SECRET=%s\n' "$secret" | $SUDO tee .env >/dev/null
+  if [ -n "$SUDO" ]; then
+    $SUDO env REPO_URL="$REPO_URL" APP_DIR="$APP_DIR" SCRIPT_PATH="$SCRIPT_PATH" "$INSTALL_WEB_PATH"
+  else
+    REPO_URL="$REPO_URL" APP_DIR="$APP_DIR" SCRIPT_PATH="$SCRIPT_PATH" "$INSTALL_WEB_PATH"
   fi
-  if [ -f manager.sh ]; then
-    $SUDO install -m 755 manager.sh /usr/local/bin/realm
-    $SUDO install -m 755 manager.sh /usr/local/bin/realm-web-manager
-  fi
-  $SUDO $compose up -d --build
-  echo "Realm Web Manager 已安装/更新"
-  show_url
 }
 
 uninstall_manager() {
@@ -131,10 +118,12 @@ update_script() {
   local temp_file
   temp_file="$(mktemp)"
   curl -fsSL "${MANAGER_URL}?t=$(date +%s)" -o "$temp_file"
-  $SUDO install -m 755 "$temp_file" /usr/local/bin/realm
-  $SUDO install -m 755 "$temp_file" /usr/local/bin/realm-web-manager
+  $SUDO install -m 755 "$temp_file" "$SCRIPT_PATH"
+  $SUDO ln -sf "$SCRIPT_PATH" /usr/local/bin/realm
+  $SUDO ln -sf "$SCRIPT_PATH" /usr/local/bin/realm-web-manager
   rm -f "$temp_file"
   echo "SSH 管理脚本已更新"
+  echo "脚本路径: $SCRIPT_PATH"
   echo "请重新输入 realm 打开新版脚本"
   exit 0
 }
@@ -143,7 +132,7 @@ uninstall_script_only() {
   read -r -p "确认仅卸载 SSH 管理脚本？面板容器和数据不会删除。[y/N]: " ok
   case "$ok" in
     y|Y)
-      $SUDO rm -f /usr/local/bin/realm /usr/local/bin/realm-web-manager
+      $SUDO rm -f "$SCRIPT_PATH" /usr/local/bin/realm /usr/local/bin/realm-web-manager
       echo "SSH 管理脚本已卸载"
       echo "面板容器和数据没有删除"
       exit 0
