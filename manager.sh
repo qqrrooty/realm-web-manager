@@ -2,6 +2,7 @@
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/qqrrooty/realm-web-manager.git}"
+MANAGER_URL="${MANAGER_URL:-https://raw.githubusercontent.com/qqrrooty/realm-web-manager/main/manager.sh}"
 APP_DIR="${APP_DIR:-/opt/realm-web-manager}"
 CONTAINER_NAME="${CONTAINER_NAME:-realm-web-manager}"
 PANEL_PORT="${PANEL_PORT:-18765}"
@@ -122,6 +123,22 @@ restart_manager() {
   $SUDO docker restart "$CONTAINER_NAME"
 }
 
+update_script() {
+  if ! command -v curl >/dev/null 2>&1; then
+    $SUDO apt-get update
+    $SUDO apt-get install -y curl ca-certificates
+  fi
+  local temp_file
+  temp_file="$(mktemp)"
+  curl -fsSL "${MANAGER_URL}?t=$(date +%s)" -o "$temp_file"
+  $SUDO install -m 755 "$temp_file" /usr/local/bin/realm
+  $SUDO install -m 755 "$temp_file" /usr/local/bin/realm-web-manager
+  rm -f "$temp_file"
+  echo "SSH 管理脚本已更新"
+  echo "请重新输入 realm 打开新版脚本"
+  exit 0
+}
+
 uninstall_script_only() {
   read -r -p "确认仅卸载 SSH 管理脚本？面板容器和数据不会删除。[y/N]: " ok
   case "$ok" in
@@ -229,7 +246,8 @@ show_menu() {
   echo "│──────────────────────────────────────────────│"
   echo "│   7. 修改Web路径                             │"
   echo "│──────────────────────────────────────────────│"
-  echo "│   8. 仅卸载脚本                              │"
+  echo "│   8. 更新脚本                                │"
+  echo "│   9. 仅卸载脚本                              │"
   echo "│   0. 退出脚本                                │"
   echo "╚──────────────────────────────────────────────╝"
   echo
@@ -242,7 +260,7 @@ show_menu() {
 
 while true; do
   show_menu
-  read -r -p "请输入你的选择 [0-8]: " selection
+  read -r -p "请输入你的选择 [0-9]: " selection
   case "$selection" in
     0) exit 0 ;;
     1) install_docker; pause ;;
@@ -252,7 +270,8 @@ while true; do
     5) stop_manager; pause ;;
     6) restart_manager; pause ;;
     7) change_path_menu; pause ;;
-    8) uninstall_script_only; pause ;;
+    8) update_script; pause ;;
+    9) uninstall_script_only; pause ;;
     *) echo "无效选择"; pause ;;
   esac
 done
