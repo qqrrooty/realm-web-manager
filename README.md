@@ -9,35 +9,44 @@ Realm Web Manager 是 [zhboner/realm](https://github.com/zhboner/realm) 的 Dock
 - 安装/更新 Realm
 - 启动、停止、重启 Realm
 - 默认随机网页路径，避免直接扫 IP + 端口进入登录页
-- 面板内查看和修改当前网页路径
-- 面板内提供 Docker / Docker 版网页管理启动、停止、重启、卸载入口
+- SSH 管理脚本查看和修改当前 Web 路径
+- SSH 管理脚本支持安装 Docker、安装/卸载面板、启动/停止/重启面板、修改 Web 路径
 - 设置每日定时重启
 - 支持 Nginx / Caddy 反代
 - Docker Compose 部署
 
-## 一键安装
+## SSH 管理脚本
 
-用户安装时执行：
+先安装 SSH 管理脚本：
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/qqrrooty/realm-web-manager/main/install.sh)
 ```
 
-安装完成后，面板会监听：
-
-```text
-http://服务器IP:18765/随机路径
-```
-
-首次打开会要求设置管理员用户名和密码。
-
-安装完成后，SSH 中可以运行管理脚本：
+然后在 SSH 中输入：
 
 ```bash
 realm
 ```
 
-脚本菜单包含安装 Docker、安装/卸载 Docker 版网页管理、启动/停止/重启网页管理、查看当前路径、修改 Web 基础路径。
+进入脚本后，选择 `2. 安装 Realm Web Manager` 来安装面板。
+
+脚本菜单包含：
+
+```text
+0. 退出脚本
+1. 安装 Docker
+2. 安装 Realm Web Manager
+3. 卸载 Realm Web Manager
+4. 启动面板
+5. 停止面板
+6. 重启面板
+7. 修改Web路径
+```
+
+脚本底部会显示当前 Web 路径和访问地址。修改 Web 路径时可以选择随机路径或自定义路径。
+
+首次打开面板页面会要求设置管理员用户名和密码。
 
 ## 手动安装
 
@@ -87,13 +96,13 @@ server {
 
 `docker-compose.yml` 使用 `network_mode: host`。这样 Realm 配置里的监听端口会直接监听在宿主机上，适合做端口转发管理。
 
-面板默认监听 `0.0.0.0:18765`，可以直接用 `http://服务器IP:18765` 访问。
-首次启动会自动生成随机访问路径，并保存到 Docker 数据卷的 `/data/web-path`。进入面板后可以在“安装管理”里查看和修改当前路径。
+面板默认监听 `0.0.0.0:18765`，访问地址由 SSH 管理脚本显示。
+首次启动会自动生成 16 位随机访问路径，并保存到 Docker 数据卷的 `/data/web-path`。路径查看和修改都在 SSH 管理脚本里完成。
 
 如果要手动指定初始路径，可以在 `.env` 中加入：
 
 ```env
-WEB_BASE_PATH=/rw-your-secret-path
+WEB_BASE_PATH=/1234567890abcdef
 ```
 
 路径只能使用 6-48 位字母、数字、下划线或短横线。

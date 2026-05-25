@@ -66,7 +66,7 @@ function normalizeWebBasePath(value) {
 }
 
 function randomWebBasePath() {
-  return `/rw-${crypto.randomBytes(6).toString("hex")}`;
+  return `/${crypto.randomBytes(8).toString("hex")}`;
 }
 
 function randomCustomWebBasePath() {

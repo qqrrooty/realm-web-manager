@@ -89,6 +89,10 @@ install_manager() {
     secret="$(openssl rand -hex 32 2>/dev/null || date +%s%N | sha256sum | awk '{print $1}')"
     printf 'REALM_SESSION_SECRET=%s\n' "$secret" | $SUDO tee .env >/dev/null
   fi
+  if [ -f manager.sh ]; then
+    $SUDO install -m 755 manager.sh /usr/local/bin/realm
+    $SUDO install -m 755 manager.sh /usr/local/bin/realm-web-manager
+  fi
   $SUDO $compose up -d --build
   echo "Realm Web Manager 已安装/更新"
   show_url
@@ -116,6 +120,26 @@ stop_manager() {
 
 restart_manager() {
   $SUDO docker restart "$CONTAINER_NAME"
+}
+
+panel_state_text() {
+  case "$1" in
+    running) echo "运行中" ;;
+    exited|created|dead) echo "已停止" ;;
+    restarting) echo "重启中" ;;
+    paused) echo "已暂停" ;;
+    未安装) echo "未安装" ;;
+    *) echo "未知" ;;
+  esac
+}
+
+autostart_text() {
+  case "$1" in
+    always|unless-stopped|on-failure) echo "是" ;;
+    no|"") echo "否" ;;
+    unknown) echo "未知" ;;
+    *) echo "$1" ;;
+  esac
 }
 
 write_path_and_restart() {
@@ -160,10 +184,12 @@ change_path_menu() {
 }
 
 show_menu() {
-  local release panel_state autostart realm_state path
+  local release panel_state autostart realm_state path panel_state_display autostart_display
   release="$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")"
   panel_state="$($SUDO docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "未安装")"
   autostart="$($SUDO docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME" 2>/dev/null || echo "unknown")"
+  panel_state_display="$(panel_state_text "$panel_state")"
+  autostart_display="$(autostart_text "$autostart")"
   path="$(current_path)"
   [ -n "$path" ] || path="未生成"
   if $SUDO docker exec "$CONTAINER_NAME" pgrep -x realm >/dev/null 2>&1; then
@@ -192,8 +218,8 @@ show_menu() {
   echo "│   7. 修改Web路径                             │"
   echo "╚──────────────────────────────────────────────╝"
   echo
-  echo "面板状态: $panel_state"
-  echo "开机自启: $autostart"
+  echo "面板状态: $panel_state_display"
+  echo "开机自启: $autostart_display"
   echo "Realm 状态: $realm_state"
   echo "当前路径: $path"
   echo

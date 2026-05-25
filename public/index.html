@@ -41,7 +41,6 @@
         <nav class="nav">
           <button id="themeToggleBtn" class="theme-link" type="button"><span class="nav-icon">◐</span><span class="nav-text">主题</span></button>
           <a class="active" href="#dashboard"><span class="nav-icon">◴</span><span class="nav-text">仪表盘</span></a>
-          <a href="#install"><span class="nav-icon">⇩</span><span class="nav-text">安装管理</span></a>
           <a href="#rules"><span class="nav-icon">♙</span><span class="nav-text">转发规则</span></a>
           <a href="#tasks"><span class="nav-icon">◷</span><span class="nav-text">定时任务</span></a>
           <a href="#config"><span class="nav-icon">⚙</span><span class="nav-text">配置文件</span></a>
@@ -75,41 +74,6 @@
             <span>配置文件</span>
             <strong id="configPath">-</strong>
           </article>
-        </section>
-
-        <section id="install" class="panel install-panel">
-          <div class="install-terminal">
-            <p class="install-os">系统版本: <span id="osRelease">读取中</span></p>
-            <div class="install-box">
-              <div class="install-title">Docker 网页管理</div>
-              <div class="install-menu">
-                <button type="button" data-manager-action="installDocker"><span>1.</span> 安装 Docker</button>
-                <button type="button" data-manager-action="installManager"><span>2.</span> 安装 Docker 版网页管理</button>
-                <button type="button" data-manager-action="uninstallManager" class="danger-text"><span>3.</span> 卸载 Docker 版网页管理</button>
-                <button type="button" data-manager-action="startManager"><span>4.</span> 启动网页管理</button>
-                <button type="button" data-manager-action="stopManager"><span>5.</span> 停止网页管理</button>
-                <button type="button" data-manager-action="restartManager"><span>6.</span> 重启网页管理</button>
-                <button type="button" data-path-focus><span>7.</span> 当前路径：<code id="webBasePathMenu">读取中</code></button>
-                <button type="button" data-path-edit><span>8.</span> 修改 Web 基础路径</button>
-              </div>
-            </div>
-            <div class="path-manager">
-              <div>当前路径: <code id="webBasePath">读取中</code></div>
-              <div class="path-mode">
-                <label><input type="radio" name="webPathMode" value="random" checked> 1. 随机路径</label>
-                <label><input type="radio" name="webPathMode" value="custom"> 2. 自定义路径</label>
-              </div>
-              <div class="path-controls">
-                <input id="webPathInput" placeholder="/rw-xxxxxxxxxxxx">
-                <button type="button" id="changeWebPathBtn">确认修改</button>
-              </div>
-            </div>
-            <div class="install-states">
-              <p>面板状态: <strong id="panelMenuState">运行中</strong></p>
-              <p>开机自启: <strong id="autoStartState">读取中</strong></p>
-              <p>Realm 状态: <strong id="realmMenuState">读取中</strong></p>
-            </div>
-          </div>
         </section>
 
         <section id="rules" class="rules-layout">
