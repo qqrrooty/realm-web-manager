@@ -145,6 +145,37 @@ restart_manager() {
   $SUDO docker restart "$CONTAINER_NAME"
 }
 
+change_login_info() {
+  local username password confirm
+  if [ "$($SUDO docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "missing")" != "running" ]; then
+    echo "Web面板未运行，无法修改登录信息"
+    return 1
+  fi
+  read -r -p "请输入新用户名: " username
+  if ! printf '%s' "$username" | grep -Eq '^[a-zA-Z0-9_.-]{3,32}$'; then
+    echo "用户名需为 3-32 位字母、数字、点、下划线或短横线"
+    return 1
+  fi
+  read -r -s -p "请输入新密码: " password
+  echo
+  read -r -s -p "请再次输入新密码: " confirm
+  echo
+  if [ "$password" != "$confirm" ]; then
+    echo "两次输入的密码不一致"
+    return 1
+  fi
+  if [ "${#password}" -lt 8 ]; then
+    echo "密码至少 8 位"
+    return 1
+  fi
+  $SUDO docker exec \
+    -e NEW_USERNAME="$username" \
+    -e NEW_PASSWORD="$password" \
+    "$CONTAINER_NAME" \
+    node -e 'const fs=require("fs"); const crypto=require("crypto"); const username=process.env.NEW_USERNAME; const password=process.env.NEW_PASSWORD; const salt=crypto.randomBytes(16).toString("base64url"); const hash=crypto.pbkdf2Sync(password,salt,180000,32,"sha256").toString("base64url"); fs.writeFileSync("/data/users.json", JSON.stringify({users:[{username,salt,hash,createdAt:new Date().toISOString()}]}, null, 2));'
+  echo "登录信息已修改"
+}
+
 update_script() {
   if ! command -v curl >/dev/null 2>&1; then
     $SUDO apt-get update
@@ -264,9 +295,10 @@ show_menu() {
   echo "│   6. 重启Web面板                             │"
   echo "│──────────────────────────────────────────────│"
   echo "│   7. 修改Web路径                             │"
+  echo "│   8. 修改登录信息                            │"
   echo "│──────────────────────────────────────────────│"
-  echo "│   8. 更新脚本                                │"
-  echo "│   9. 仅卸载脚本                              │"
+  echo "│   9. 更新脚本                                │"
+  echo "│  10. 仅卸载脚本                              │"
   echo "│   0. 退出脚本                                │"
   echo "╚──────────────────────────────────────────────╝"
   echo
@@ -278,7 +310,7 @@ show_menu() {
 
 while true; do
   show_menu
-  read -r -p "请输入你的选择 [0-9]: " selection
+  read -r -p "请输入你的选择 [0-10]: " selection
   case "$selection" in
     0) exit 0 ;;
     1) install_docker; pause ;;
@@ -288,8 +320,9 @@ while true; do
     5) stop_manager; pause ;;
     6) restart_manager; pause ;;
     7) change_path_menu; pause ;;
-    8) update_script; pause ;;
-    9) uninstall_script_only; pause ;;
+    8) change_login_info; pause ;;
+    9) update_script; pause ;;
+    10) uninstall_script_only; pause ;;
     *) echo "无效选择"; pause ;;
   esac
 done
