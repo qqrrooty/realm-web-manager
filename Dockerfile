@@ -14,7 +14,7 @@ ENV REALM_USERS_FILE=/data/users.json
 ENV REALM_CRON_STATE=/data/restart-schedule.json
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl tar \
+  && apt-get install -y --no-install-recommends ca-certificates curl tar git openssl docker.io \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /data
 

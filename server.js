@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const https = require("https");
 const http = require("http");
 const fs = require("fs/promises");
 const fsSync = require("fs");
@@ -19,6 +20,9 @@ const CRONTAB_FILE = process.env.REALM_CRONTAB || "/etc/crontab";
 const CRON_STATE_FILE = process.env.REALM_CRON_STATE || "/data/restart-schedule.json";
 const USERS_FILE = process.env.REALM_USERS_FILE || "/data/users.json";
 const LOG_FILE = process.env.REALM_WEB_LOG || (RUNTIME === "docker" ? "/data/realm_web_manager.log" : "/var/log/realm_web_manager.log");
+const WEB_PATH_FILE = process.env.REALM_WEB_PATH_FILE || (RUNTIME === "docker" ? "/data/web-path" : path.join(REALM_DIR, "web-path"));
+const MANAGER_REPO_URL = process.env.REALM_WEB_MANAGER_REPO || "https://github.com/qqrrooty/realm-web-manager.git";
+const MANAGER_APP_DIR = process.env.REALM_WEB_MANAGER_DIR || "/opt/realm-web-manager";
 const PUBLIC_DIR = path.join(__dirname, "public");
 const AUTO_START_REALM = process.env.AUTO_START_REALM !== "false";
 
@@ -26,6 +30,7 @@ let realmProcess = null;
 let realmStartedAt = null;
 let manualStop = false;
 let restartTimer = null;
+let webBasePath = loadOrCreateWebBasePath();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -47,6 +52,51 @@ function sendJson(res, status, payload, headers = {}) {
 function sendText(res, status, body, type = "text/plain; charset=utf-8") {
   res.writeHead(status, { "content-type": type });
   res.end(body);
+}
+
+function normalizeWebBasePath(value) {
+  const text = String(value || "").trim().replace(/^\/+|\/+$/g, "");
+  if (!/^[a-zA-Z0-9_-]{6,48}$/.test(text)) {
+    throw new Error("路径只能使用 6-48 位字母、数字、下划线或短横线");
+  }
+  if (["api", "public", "static", "assets"].includes(text.toLowerCase())) {
+    throw new Error("这个路径名称不可使用");
+  }
+  return `/${text}`;
+}
+
+function randomWebBasePath() {
+  return `/rw-${crypto.randomBytes(6).toString("hex")}`;
+}
+
+function randomCustomWebBasePath() {
+  return `/${crypto.randomBytes(8).toString("hex")}`;
+}
+
+function loadOrCreateWebBasePath() {
+  let value = "";
+  try {
+    value = fsSync.readFileSync(WEB_PATH_FILE, "utf8").trim();
+  } catch {
+    value = process.env.WEB_BASE_PATH || randomWebBasePath();
+  }
+  const normalized = normalizeWebBasePath(value);
+  try {
+    fsSync.mkdirSync(path.dirname(WEB_PATH_FILE), { recursive: true });
+    fsSync.writeFileSync(WEB_PATH_FILE, `${normalized}\n`, "utf8");
+  } catch {
+    // The panel can still run with the in-memory path.
+  }
+  return normalized;
+}
+
+async function updateWebBasePath(value) {
+  const normalized = normalizeWebBasePath(value);
+  await fs.mkdir(path.dirname(WEB_PATH_FILE), { recursive: true });
+  await fs.writeFile(WEB_PATH_FILE, `${normalized}\n`, "utf8");
+  webBasePath = normalized;
+  await log(`修改面板访问路径: ${normalized}`);
+  return normalized;
 }
 
 function readBody(req) {
@@ -350,6 +400,22 @@ async function serviceStatus() {
   return RUNTIME === "docker" ? dockerStatus() : systemdStatus();
 }
 
+async function osRelease() {
+  try {
+    const content = await fs.readFile("/etc/os-release", "utf8");
+    const entries = Object.fromEntries(
+      content
+        .split(/\r?\n/)
+        .map((line) => line.match(/^([A-Z_]+)=(.*)$/))
+        .filter(Boolean)
+        .map((match) => [match[1], match[2].replace(/^"|"$/g, "")])
+    );
+    return entries.ID || entries.PRETTY_NAME || process.platform;
+  } catch {
+    return process.platform;
+  }
+}
+
 async function ensureServiceFile() {
   const body = `[Unit]
 Description=Realm Proxy Service
@@ -388,14 +454,34 @@ function compareVersions(left, right) {
 }
 
 async function latestRealmVersion() {
-  const result = await runShell("curl -fsSL https://api.github.com/repos/zhboner/realm/releases/latest 2>/dev/null");
-  if (!result.ok) throw new Error(result.stderr || result.message || "检查更新失败");
-  try {
-    const data = JSON.parse(result.stdout);
-    return normalizeVersion(data.tag_name);
-  } catch {
-    throw new Error("无法解析最新版本信息");
-  }
+  const data = await new Promise((resolve, reject) => {
+    const req = https.get(
+      "https://api.github.com/repos/zhboner/realm/releases/latest",
+      { headers: { "user-agent": "realm-web-manager" } },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => {
+          body += chunk;
+        });
+        res.on("end", () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error(`检查更新失败: HTTP ${res.statusCode}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(body));
+          } catch {
+            reject(new Error("无法解析最新版本信息"));
+          }
+        });
+      }
+    );
+    req.setTimeout(15000, () => {
+      req.destroy(new Error("检查更新超时"));
+    });
+    req.on("error", reject);
+  });
+  return normalizeVersion(data.tag_name);
 }
 
 async function checkRealmUpdate() {
@@ -500,6 +586,40 @@ async function controlSystemdService(action) {
 async function controlService(action) {
   const result = RUNTIME === "docker" ? await controlDockerService(action) : await controlSystemdService(action);
   await log(`服务操作: ${action}`);
+  return result;
+}
+
+async function runManagerAction(action) {
+  const installDockerScript = [
+    "set -e",
+    "if command -v docker >/dev/null 2>&1; then docker --version; exit 0; fi",
+    "if ! command -v curl >/dev/null 2>&1; then apt-get update && apt-get install -y curl ca-certificates; fi",
+    "curl -fsSL https://get.docker.com | sh",
+    "docker --version"
+  ].join("\n");
+  const installManagerScript = [
+    "set -e",
+    "if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sh; fi",
+    "COMPOSE='docker compose'",
+    "if ! docker compose version >/dev/null 2>&1; then if command -v docker-compose >/dev/null 2>&1; then COMPOSE='docker-compose'; else echo 'Docker Compose 不可用' >&2; exit 1; fi; fi",
+    "if ! command -v git >/dev/null 2>&1; then apt-get update && apt-get install -y git curl ca-certificates; fi",
+    `mkdir -p ${quoteShell(path.dirname(MANAGER_APP_DIR))}`,
+    `if [ -d ${quoteShell(path.join(MANAGER_APP_DIR, ".git"))} ]; then cd ${quoteShell(MANAGER_APP_DIR)} && git pull; else git clone ${quoteShell(MANAGER_REPO_URL)} ${quoteShell(MANAGER_APP_DIR)} && cd ${quoteShell(MANAGER_APP_DIR)}; fi`,
+    "if [ ! -f .env ]; then SECRET=$(openssl rand -hex 32 2>/dev/null || date +%s%N | sha256sum | awk '{print $1}'); printf 'REALM_SESSION_SECRET=%s\\n' \"$SECRET\" > .env; fi",
+    "$COMPOSE up -d --build"
+  ].join("\n");
+  const commands = {
+    installDocker: installDockerScript,
+    installManager: installManagerScript,
+    uninstallManager: `(sleep 1; docker rm -f realm-web-manager; rm -rf ${quoteShell(MANAGER_APP_DIR)} 2>/dev/null || true) >/tmp/realm-web-manager-action.log 2>&1 & echo '卸载任务已提交'`,
+    startManager: "docker start realm-web-manager",
+    stopManager: "(sleep 1; docker stop realm-web-manager) >/tmp/realm-web-manager-action.log 2>&1 & echo '停止任务已提交'",
+    restartManager: "(sleep 1; docker restart realm-web-manager) >/tmp/realm-web-manager-action.log 2>&1 & echo '重启任务已提交'"
+  };
+  if (!commands[action]) throw new Error("未知管理操作");
+  const result = await runShell(commands[action], { timeout: 600000 });
+  if (!result.ok) throw new Error(result.stderr || result.message || "管理操作失败");
+  await log(`Docker 管理操作: ${action}`);
   return result;
 }
 
@@ -668,15 +788,18 @@ async function handleApi(req, res, pathname) {
     if (!requireAuth(req, res)) return;
 
     if (req.method === "GET" && pathname === "/api/status") {
-      const [status, parsed, cronJobs, logs] = await Promise.all([
+      const [status, parsed, cronJobs, logs, release] = await Promise.all([
         serviceStatus(),
         readConfig(),
         readCronJobs(),
-        fs.readFile(LOG_FILE, "utf8").catch(() => "")
+        fs.readFile(LOG_FILE, "utf8").catch(() => ""),
+        osRelease()
       ]);
       return sendJson(res, 200, {
         ok: true,
         version: VERSION,
+        osRelease: release,
+        webBasePath,
         configFile: CONFIG_FILE,
         status,
         endpoints: parsed.endpoints,
@@ -694,6 +817,22 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && pathname === "/api/update-check") {
       const result = await checkRealmUpdate();
       return sendJson(res, 200, { ok: true, ...result });
+    }
+
+    if (req.method === "GET" && pathname === "/api/web-path") {
+      return sendJson(res, 200, { ok: true, webBasePath });
+    }
+
+    if (req.method === "POST" && pathname === "/api/web-path") {
+      const body = await readBody(req);
+      const nextPath = await updateWebBasePath(body.random ? randomCustomWebBasePath() : body.path);
+      return sendJson(res, 200, { ok: true, webBasePath: nextPath });
+    }
+
+    if (req.method === "POST" && pathname === "/api/manager") {
+      const body = await readBody(req);
+      const result = await runManagerAction(body.action);
+      return sendJson(res, 200, { ok: true, output: result.stdout || result.stderr });
     }
 
     if (req.method === "POST" && pathname === "/api/service") {
@@ -845,8 +984,15 @@ async function serveStatic(req, res, pathname) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-  if (url.pathname.startsWith("/api/")) return handleApi(req, res, url.pathname);
-  return serveStatic(req, res, url.pathname);
+  if (url.pathname === webBasePath) {
+    res.writeHead(302, { location: `${webBasePath}/` });
+    res.end();
+    return;
+  }
+  if (!url.pathname.startsWith(`${webBasePath}/`)) return sendText(res, 404, "Not found");
+  const pathname = url.pathname.slice(webBasePath.length) || "/";
+  if (pathname.startsWith("/api/")) return handleApi(req, res, pathname);
+  return serveStatic(req, res, pathname);
 });
 
 async function boot() {
@@ -856,7 +1002,7 @@ async function boot() {
     startDockerRealm();
   }
   server.listen(PORT, HOST, () => {
-    console.log(`Realm Web Manager listening on http://${HOST}:${PORT}`);
+    console.log(`Realm Web Manager listening on http://${HOST}:${PORT}${webBasePath}/`);
     console.log(`Runtime: ${RUNTIME}`);
     if (RUNTIME === "systemd" && typeof process.getuid === "function" && process.getuid() !== 0) {
       console.log("Warning: not running as root. Install, service control, and crontab management may fail.");

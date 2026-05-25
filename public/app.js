@@ -7,6 +7,7 @@ const state = {
 };
 
 const $ = (selector) => document.querySelector(selector);
+const API_BASE_PATH = `/${location.pathname.split("/").filter(Boolean)[0] || ""}`.replace(/\/$/, "");
 const savedTheme = localStorage.getItem("realmTheme") || "light";
 document.documentElement.dataset.theme = savedTheme;
 const savedSidebarValue = localStorage.getItem("realmSidebarCollapsed");
@@ -27,7 +28,7 @@ async function api(path, options = {}) {
     headers["content-type"] = "application/json";
     options.body = JSON.stringify(options.body);
   }
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(`${API_BASE_PATH}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.ok === false) throw new Error(data.error || `请求失败: ${res.status}`);
   return data;
@@ -235,6 +236,29 @@ function realmVersionText(value) {
   return version ? `Realm ${version}` : "未知版本";
 }
 
+function menuStateText(value) {
+  const map = {
+    active: "运行中",
+    inactive: "已停止",
+    failed: "运行失败",
+    activating: "启动中",
+    deactivating: "停止中",
+    unknown: "未知"
+  };
+  return map[value] || value || "未知";
+}
+
+function autoStartText(value) {
+  const map = {
+    enabled: "是",
+    autostart: "是",
+    disabled: "否",
+    manual: "否",
+    unknown: "未知"
+  };
+  return map[value] || value || "未知";
+}
+
 async function checkSession() {
   const data = await api("/api/session");
   state.needsSetup = Boolean(data.needsSetup);
@@ -256,6 +280,13 @@ async function loadStatus() {
   const realmVersion = realmVersionText(data.status?.realmVersion);
   setStateText($("#serviceState"), serviceStateText(active), active === "active" ? "state-ok" : "state-bad");
   setStateText($("#installState"), installed ? `已安装 / ${realmVersion}` : "未安装", installed ? "state-ok" : "state-warn");
+  $("#osRelease").textContent = data.osRelease || "unknown";
+  $("#webBasePath").textContent = data.webBasePath || API_BASE_PATH || "/";
+  $("#webBasePathMenu").textContent = data.webBasePath || API_BASE_PATH || "/";
+  $("#webPathInput").placeholder = data.webBasePath || "/rw-xxxxxxxxxxxx";
+  $("#panelMenuState").textContent = "运行中";
+  $("#autoStartState").textContent = autoStartText(data.status?.enabled);
+  $("#realmMenuState").textContent = menuStateText(active);
   $("#configPath").textContent = data.configFile || "-";
   $("#logsOutput").textContent = (data.logs || []).join("\n") || "暂无日志";
   $("#cronList").textContent = (data.cronJobs || []).join("\n") || "暂无定时重启任务";
@@ -354,11 +385,61 @@ async function serviceAction(action) {
   } else if (action === "checkUpdate") {
     const data = await api("/api/update-check");
     toast(data.hasUpdate ? `发现新版本 ${data.latest}，当前 ${data.current}` : `已是最新版本 ${data.current}`, data.hasUpdate ? "info" : "ok");
+  } else if (action === "status") {
+    await loadStatus();
+    toast("状态已刷新", "ok");
   } else {
     await api("/api/service", { method: "POST", body: { action } });
     toast(`服务已${action === "start" ? "启动" : action === "stop" ? "停止" : "重启"}`, "ok");
   }
   await loadStatus();
+}
+
+async function managerAction(action) {
+  const messages = {
+    installDocker: "Docker 安装完成",
+    installManager: "Docker 版网页管理安装完成",
+    uninstallManager: "Docker 版网页管理已卸载",
+    startManager: "网页管理已启动",
+    stopManager: "网页管理已停止",
+    restartManager: "网页管理已重启"
+  };
+  if (["uninstallManager", "stopManager", "restartManager"].includes(action)) {
+    const ok = confirm("这个操作会影响当前网页管理服务，确认继续？");
+    if (!ok) return;
+  }
+  await api("/api/manager", { method: "POST", body: { action } });
+  toast(messages[action] || "操作完成", "ok");
+  if (action !== "stopManager" && action !== "uninstallManager") await loadStatus();
+}
+
+async function saveCustomWebPath() {
+  const value = $("#webPathInput").value.trim();
+  if (!value) throw new Error("请输入新路径");
+  const data = await api("/api/web-path", { method: "POST", body: { path: value } });
+  toast(`路径已修改为 ${data.webBasePath}`, "ok");
+  setTimeout(() => {
+    location.href = `${data.webBasePath}/`;
+  }, 900);
+}
+
+async function randomWebPath() {
+  const ok = confirm("确认生成新的随机 16 位路径？修改后需要用新路径访问面板。");
+  if (!ok) return;
+  const data = await api("/api/web-path", { method: "POST", body: { random: true } });
+  toast(`路径已修改为 ${data.webBasePath}`, "ok");
+  setTimeout(() => {
+    location.href = `${data.webBasePath}/`;
+  }, 900);
+}
+
+async function changeWebPath() {
+  const mode = document.querySelector('input[name="webPathMode"]:checked')?.value || "random";
+  if (mode === "random") {
+    await randomWebPath();
+  } else {
+    await saveCustomWebPath();
+  }
 }
 
 async function exportRules() {
@@ -511,8 +592,28 @@ function bindEvents() {
     }
   });
   $("#ruleForm").addEventListener("submit", (event) => saveRule(event).catch((error) => toast(error.message, "error")));
-  document.querySelector(".actions").addEventListener("click", (event) => {
-    const action = event.target.dataset.action;
+  $("#changeWebPathBtn").addEventListener("click", () => changeWebPath().catch((error) => toast(error.message, "error")));
+  $("#install").addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button) return;
+    const manager = button.dataset.managerAction;
+    if (manager) {
+      managerAction(manager).catch((error) => toast(error.message, "error"));
+      return;
+    }
+    if (button.hasAttribute("data-path-focus") || button.hasAttribute("data-path-edit")) {
+      $(".path-manager").scrollIntoView({ behavior: "smooth", block: "center" });
+      if (button.hasAttribute("data-path-edit")) {
+        $("#webPathInput").focus();
+      }
+      return;
+    }
+    const scrollTarget = button.dataset.scroll;
+    if (scrollTarget) {
+      document.querySelector(scrollTarget)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    const action = button.dataset.action;
     if (!action) return;
     serviceAction(action).catch((error) => toast(error.message, "error"));
   });

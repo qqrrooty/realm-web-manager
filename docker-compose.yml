@@ -8,9 +8,11 @@ services:
       HOST: "0.0.0.0"
       PORT: "18765"
       REALM_SESSION_SECRET: "${REALM_SESSION_SECRET}"
+      WEB_BASE_PATH: "${WEB_BASE_PATH:-}"
       REALM_RUNTIME: "docker"
     volumes:
       - realm-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   realm-data:
