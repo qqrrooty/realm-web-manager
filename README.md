@@ -34,7 +34,6 @@ realm
 脚本菜单包含：
 
 ```text
-0. 退出脚本
 1. 安装 Docker
 2. 安装 Realm Web Manager
 3. 卸载 Realm Web Manager
@@ -42,6 +41,8 @@ realm
 5. 停止面板
 6. 重启面板
 7. 修改Web路径
+8. 仅卸载脚本
+0. 退出脚本
 ```
 
 脚本底部会显示当前 Web 路径和访问地址。修改 Web 路径时可以选择随机路径或自定义路径。
