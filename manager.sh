@@ -72,6 +72,18 @@ show_url() {
   fi
 }
 
+current_url() {
+  local path ip
+  path="$(current_path)"
+  [ -n "$path" ] || path="/"
+  ip="$(public_ip)"
+  if [ -n "$ip" ]; then
+    echo "http://${ip}:${PANEL_PORT}${path}"
+  else
+    echo "http://服务器IP:${PANEL_PORT}${path}"
+  fi
+}
+
 pause() {
   read -r -p "按回车键继续..."
 }
@@ -226,12 +238,11 @@ change_path_menu() {
 }
 
 show_menu() {
-  local release panel_state realm_state path panel_state_display
+  local release panel_state realm_state current_access_url panel_state_display
   release="$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")"
   panel_state="$($SUDO docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "未安装")"
   panel_state_display="$(panel_state_text "$panel_state")"
-  path="$(current_path)"
-  [ -n "$path" ] || path="未生成"
+  current_access_url="$(current_url)"
   if [ "$panel_state" = "running" ]; then
     realm_state="$(realm_state_text)"
   else
@@ -261,7 +272,7 @@ show_menu() {
   echo
   printf "面板状态: %b\n" "$(color_state "$panel_state_display")"
   printf "Realm 状态: %b\n" "$(color_state "$realm_state")"
-  echo "当前路径: $path"
+  echo "当前访问地址: $current_access_url"
   echo
 }
 
