@@ -43,22 +43,20 @@ current_path() {
 }
 
 realm_state_text() {
-  local path state
-  path="$(current_path)"
-  if [ -n "$path" ] && command -v curl >/dev/null 2>&1; then
-    state="$(curl -fsSL --max-time 3 "http://127.0.0.1:${PANEL_PORT}${path}/api/status" 2>/dev/null | sed -n 's/.*"active":"\([^"]*\)".*/\1/p' | head -n1 || true)"
-    case "$state" in
-      active) echo "运行中"; return ;;
-      inactive) echo "未运行"; return ;;
-      failed) echo "运行失败"; return ;;
-      activating) echo "启动中"; return ;;
-      deactivating) echo "停止中"; return ;;
-    esac
-  fi
-  if $SUDO docker exec "$CONTAINER_NAME" sh -c 'pgrep -af "realm.*-c|/data/realm/realm|/realm/realm" >/dev/null' 2>/dev/null; then
+  if $SUDO docker exec "$CONTAINER_NAME" sh -c '
+    for f in /proc/[0-9]*/cmdline; do
+      cmd="$(tr "\000" " " < "$f" 2>/dev/null || true)"
+      case "$cmd" in
+        *"/data/realm/realm -c "*|*" realm -c "*|*"realm -c "*) exit 0 ;;
+      esac
+    done
+    exit 1
+  ' 2>/dev/null; then
     echo "运行中"
+  elif $SUDO docker exec "$CONTAINER_NAME" test -x /data/realm/realm 2>/dev/null; then
+    echo "未运行"
   else
-    echo "未知"
+    echo "未安装"
   fi
 }
 
@@ -177,15 +175,6 @@ panel_state_text() {
   esac
 }
 
-autostart_text() {
-  case "$1" in
-    always|unless-stopped|on-failure) echo "是" ;;
-    no|"") echo "否" ;;
-    unknown) echo "未知" ;;
-    *) echo "$1" ;;
-  esac
-}
-
 color_state() {
   case "$1" in
     运行中|是) printf "%b%s%b" "$GREEN" "$1" "$RESET" ;;
@@ -237,12 +226,10 @@ change_path_menu() {
 }
 
 show_menu() {
-  local release panel_state autostart realm_state path panel_state_display autostart_display
+  local release panel_state realm_state path panel_state_display
   release="$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}" || echo "unknown")"
   panel_state="$($SUDO docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "未安装")"
-  autostart="$($SUDO docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME" 2>/dev/null || echo "unknown")"
   panel_state_display="$(panel_state_text "$panel_state")"
-  autostart_display="$(autostart_text "$autostart")"
   path="$(current_path)"
   [ -n "$path" ] || path="未生成"
   if [ "$panel_state" = "running" ]; then
@@ -273,7 +260,6 @@ show_menu() {
   echo "╚──────────────────────────────────────────────╝"
   echo
   printf "面板状态: %b\n" "$(color_state "$panel_state_display")"
-  printf "开机自启: %b\n" "$(color_state "$autostart_display")"
   printf "Realm 状态: %b\n" "$(color_state "$realm_state")"
   echo "当前路径: $path"
   echo
