@@ -16,6 +16,11 @@ else
   SUDO="sudo"
 fi
 
+RED="\033[31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+RESET="\033[0m"
+
 compose_cmd() {
   if docker compose version >/dev/null 2>&1; then
     echo "docker compose"
@@ -35,6 +40,26 @@ public_ip() {
 
 current_path() {
   $SUDO docker exec "$CONTAINER_NAME" sh -c 'cat /data/web-path 2>/dev/null' 2>/dev/null || true
+}
+
+realm_state_text() {
+  local path state
+  path="$(current_path)"
+  if [ -n "$path" ] && command -v curl >/dev/null 2>&1; then
+    state="$(curl -fsSL --max-time 3 "http://127.0.0.1:${PANEL_PORT}${path}/api/status" 2>/dev/null | sed -n 's/.*"active":"\([^"]*\)".*/\1/p' | head -n1 || true)"
+    case "$state" in
+      active) echo "运行中"; return ;;
+      inactive) echo "未运行"; return ;;
+      failed) echo "运行失败"; return ;;
+      activating) echo "启动中"; return ;;
+      deactivating) echo "停止中"; return ;;
+    esac
+  fi
+  if $SUDO docker exec "$CONTAINER_NAME" sh -c 'pgrep -af "realm.*-c|/data/realm/realm|/realm/realm" >/dev/null' 2>/dev/null; then
+    echo "运行中"
+  else
+    echo "未知"
+  fi
 }
 
 show_url() {
@@ -161,6 +186,15 @@ autostart_text() {
   esac
 }
 
+color_state() {
+  case "$1" in
+    运行中|是) printf "%b%s%b" "$GREEN" "$1" "$RESET" ;;
+    未运行|已停止|运行失败|否|未安装) printf "%b%s%b" "$RED" "$1" "$RESET" ;;
+    启动中|停止中|重启中|未知) printf "%b%s%b" "$YELLOW" "$1" "$RESET" ;;
+    *) printf "%s" "$1" ;;
+  esac
+}
+
 write_path_and_restart() {
   local path="$1"
   $SUDO docker exec "$CONTAINER_NAME" sh -c "printf '%s\n' '$path' > /data/web-path"
@@ -211,10 +245,8 @@ show_menu() {
   autostart_display="$(autostart_text "$autostart")"
   path="$(current_path)"
   [ -n "$path" ] || path="未生成"
-  if $SUDO docker exec "$CONTAINER_NAME" pgrep -x realm >/dev/null 2>&1; then
-    realm_state="运行中"
-  elif [ "$panel_state" = "running" ]; then
-    realm_state="未运行"
+  if [ "$panel_state" = "running" ]; then
+    realm_state="$(realm_state_text)"
   else
     realm_state="未知"
   fi
@@ -240,9 +272,9 @@ show_menu() {
   echo "│   0. 退出脚本                                │"
   echo "╚──────────────────────────────────────────────╝"
   echo
-  echo "面板状态: $panel_state_display"
-  echo "开机自启: $autostart_display"
-  echo "Realm 状态: $realm_state"
+  printf "面板状态: %b\n" "$(color_state "$panel_state_display")"
+  printf "开机自启: %b\n" "$(color_state "$autostart_display")"
+  printf "Realm 状态: %b\n" "$(color_state "$realm_state")"
   echo "当前路径: $path"
   echo
 }
